@@ -1016,9 +1016,40 @@ Apart from MSE, the likelihood of observing the actual position given the predic
 \begin{equation}
     \frac{\sum_{i=1}^n\sum_{t=1}^{t_i}\log(p(x_t,y_t)|\mu_{x,t},\mu_{y,t},\Sigma_t)}{\sum_{i=1}^n\sum_{t=1}^{t_i}[\mathbbm{1}]}
 \end{equation}
+\\
+\\
 
-\textit{(I need to insert a table here)}
-
+\begin{table}[H]
+\parbox{.45\linewidth}{
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Road User & Dataset 1 & Dataset 2 \\ \midrule
+Pedestrian  & NA & -2.3 \\ 
+Cyclist  & NA & -3.4 \\
+Shuttle  & NA & -2.7 \\  \midrule
+Total & NA & -2.7 \\    \midrule
+%\bottomrule
+\end{tabular}
+\caption{Avg log-likelihood on test}
+\label{table:3}
+}
+\hfill
+\parbox{.5\linewidth}{
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Road User & Dataset 1 & Dataset 2 \\ \midrule
+Pedestrian  & NA & -2.3 \\ 
+Cyclist  & NA & -3.4 \\
+Shuttle  & NA & -2.4 \\  \midrule
+Total & NA & -2.7 \\    \midrule
+%\bottomrule
+\end{tabular}
+\caption{Avg log-likelihood on validation}
+\label{table:4}
+}
+\end{table}
 
 \subsection{Hyperparameter-tuning}
 \subsubsection{Vanilla LSTM}
