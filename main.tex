@@ -13,6 +13,7 @@
 \usepackage{algpseudocode}
 \usepackage{booktabs}
 \usepackage{bbm}
+\usepackage[table,xcdraw]{xcolor}
 \addbibresource{references.bib}
 
 
@@ -42,14 +43,14 @@ cyclists) are at high risk of harm in collisions with vehicles. Autonomous vehic
 
 Through this thesis, we look at developing such an intent prediction framework based on trajectory data of different road users. In this thesis, we will be working on data from infrastructure sensors that are able to record traffic movements in a given road segment during long times with high accuracy. The chief dataset is collected by Viscando AB at the Linköping University campus. This dataset specifically consists of trajectories of various road users including pedestrians, cyclists and an autonomous shuttle over an area of roughly 1300 square meters. The objective of this thesis is to explore models for the concerned data and construct a robust baseline/benchmark model along with a suitable final model. It will also be of great interest to understand behaviors of different road users and where the models are able to/ not able to capture information. Specifically, we are interested in achieving these research objectives:
 \begin{itemize}
-    \item Study relevant methods and design a suitable baseline model, which learns parameters from the data and is interpretable as well as robust. 
+    \item Study relevant methods and design a suitable baseline model for intent prediction, which learns parameters from the data and is interpretable as well as robust. 
     \item Design a more complex model that better captures dynamics of road user movement and also factors in social behaviors of road users in traffic. 
-    \item Compare and assess these models against each other and understand what behaviors are captured/not captured by each of these models
+    \item Compare and assess these models and understand what behaviors are captured/not captured by each of these models
 \end{itemize}
 
 
 \subsection{Contributions}
-In our work, we start by exploring the dataset and making suitable manipulations to the raw dataset. Constant velocity\cite{cvmodel} and acceleration models are very popular in the tracking literature and they are also considered as a good baseline for intent prediction. Therefore, a baseline constant velocity model is developed but with a significant change as compared to previous work. In our work, we estimate the parameters of the constant velocity model through data for each road user, instead of heuristically assigning values to the parameters.This is achieved through the Expectation-Maximization algorithm\cite{emalgorithm}. Through proper scoring rules \cite{scoring} and other uncertainty estimates, we  measure the difference between the predicted distribution and the actual trajectory.  After setting up the baselines and error estimates, we move on to construct a vanilla Long Short Term Memory (LSTM) model to account for spatial dependency on behavior of road users. This is then built up to a slightly more complex pooled LSTM model to account for social dependence of other road users. For this we use Attention to pool and weigh the outputs of several LSTM networks. We then conclude our work by assessing where the models fail in predicting behavior and also try to gauge why the models are not able to capture certain road behavior. 
+In our work, we start by exploring the dataset and making suitable manipulations to the raw dataset. Constant velocity\cite{cvmodel} and acceleration models are very popular in the tracking literature and they are also considered as a good baseline for intent prediction. Therefore, a baseline constant velocity model is developed but with a significant change as compared to previous work. In our work, we estimate the parameters of the constant velocity model through data for each road user, instead of heuristically assigning values to the parameters.This is achieved through the Expectation-Maximization algorithm\cite{emalgorithm}. Through uncertainty estimates, we  measure the difference between the predicted distribution and the actual trajectory.  After setting up the baselines and error estimates, we move on to construct a vanilla long short term memory (LSTM) model to better model the dynamics of a road user's trajectory . This is then built up to a more complex pooled LSTM model to account for social dependence of other road users. For this we use Self-Attention to pool and weigh the hidden layer outputs of several LSTM networks. We then conclude our work by assessing where the models fail in predicting behavior and also try to gauge why the models are not able to capture certain road behavior. 
 
 
 \subsection{Uniqueness}
@@ -57,9 +58,33 @@ There has been extensive research done on intent prediction in the past \cite{ra
 \begin{itemize}
     \item Many of these research studies deal with open source datasets with shorter trajectories, as moving in-vehicle sensors are used. In-turn our data is collected through a stationary infrastructure sensor which collects sufficiently long trajectories for each road user. 
     \item Also, many of these experiments concern themselves with image data. In our case the sensor is already equipped with an AI system that tracks and identifies distinct road users. Therefore, we work with position data of each road user in time. 
+    \item Most studies also deal with one kind of road user. For example, some of them  model vehicles on a highway, whereas others model pedestrians in a crowd. In this paper, we have interactions between three kinds of road users: cyclists, pedestrians and shuttles and this has seldom been modeled.
+    \item We propose a novel algorithm that uses a self-attention mechanism on past trajectories of road users in a scene, to predict the future positions for all road users in the scene
 \end{itemize}
-Both of these differences have certain associated advantages and disadvantages in terms of intent prediction as will be discussed later.
 
+\section{Related Work}
+In this section, relevant literature is briefly presented and ideas from these papers are discussed. Also, the context of our research is highlighted , where the similarities as well as differences between past papers are discussed.
+
+Methods related to human pose detection and intent prediction have been well explored in the past. Recently, there have been advancements in the field of human pose detection and the literature is substantially rich (\cite{he_mask_2018},\cite{fang_rmpe_2018}). Human pose detection is also an important feature to further predict action/intent of a pedestrian. It has been shown that human pose is important to measure distance between humans, and also if two pedestrians are making eye-contact or not (\cite{bertoni_perceiving_2021}). \cite{razali_pedestrian_2021} uses pose estimation techniques to construct intermediate features which are later used to determine the crossing behavior of pedestrians. For our problem, we are more focused on intent prediction methods without considering pose, as the dataset consists of trajectories and not of images. It is also of further interest to see if models not reliant on pose/gestures and reliant only on positions perform well.
+\subsection{Classification problems}
+There are two broad divisions of study in intent prediction, amongst which the first looks at classifying intent into separate classes. For example, a binary prediction is enough when predicting whether a pedestrian is going to cross/not cross the road.  \cite{kohler_stereo-vision-based_2015} detects whether a person is bending, starting or stopping based on silhouettes gathered from stereo-vision data. On the other hand, \cite{keller_will_2014} tries to predict if a person is going to the cross the road or not based on augmented features derived from a dense optical flow. A procedure based on graph convolution is used in \cite{liu_spatiotemporal_2020} to extract spatiotemporal relationships between other objects in the frame and previous time steps, so that they are useful in assessing whether a pedestrian will cross the street or not.  In the trajectory data present for our case, there aren't too many turns or chances for collisions. For this reason, our area of focus is chiefly on trajectory prediction, where instead of binary/multiple classes, a path is predicted for pedestrians. 
+\subsection{Trajectory prediction problems}
+\subsubsection{Explicit modeling methods}
+The first class of solutions in trajectory prediction problems pertain to explicit modeling methods, where the pedestrians/vehicles are modeled based on the laws of physics. Constant velocity models, constant acceleration, constant turn models incorporate basic laws of kinematics to predict future positions. There are also more complex non-linear models such as the extended Kalman filter\cite{julier_new_1997}, unscented Kalman filter\cite{noauthor_unscented_nodate} which can instead be used to model the dynamics of pedestrian movement. \cite{wu_interacting_2020} uses an interacting multiple model\cite{mazor_interacting_1998} that combines two such physics-based models and adjusts model parameters to improve its predictive accuracy. \cite{hutchison_pedestrian_2013} performs a comparative study across various such filter-based models, where path prediction accuracy is assessed. In our work, the Kalman filter constant velocity model is used as the baseline owing to its robustness. However, unlike normal implementation where model parameters are chosen heuristically, in this thesis, parameters are estimated from the data. The filter-based approaches are successful in modeling short range predictions ($<$ 1 second), but fail when predicting over longer time horizons. There are certain methods such as (\cite{hoermann_probabilistic_2017},\cite{liu_probabilistic_2022}) which attempt to model long-term predictions using concepts of particle filters, dynamic bayesian networks and gaussian processes. However, these methods were implemented on a highway dataset for predicting lane changes, where the vehicles move in a more deterministic fashion than pedestrians at intersections. 
+\subsubsection{Planning based approaches}
+There are also related planning-based approaches through which the end-goal/general intent of a pedestrian is inferred and the path of a pedestrian is "planned" based on this end goal.  For example, this end-goal is modelled as a hidden state in \cite{karasev_intent-aware_2016} and the intent is modeled as a stochastic policy conditioned on the end-goal. \cite{wiest_probabilistic_2012} tries an innovative way to assign trajectories to certain clusters of a Gaussian mixture model through which intent is modelled. This modeled intent then determines the path traversed by a pedestrian. \cite{saleh_long-term_2018} uses a novel way of combining this so-called planning based approach and path prediction approach. They do so by using an inverse-reinforcement learning network to learn the reward function and later use this reward function as an input to a sequence modeling network (such as a recurrent neural network \cite{miikkulainen_simple_2010}) that predicts future trajectories. These solutions require modeling of a goal which then influence the path being planned. However, it would be convenient to avoid this two-step process and directly model both the path and the goal/intent. 
+\subsubsection{Deep learning based approaches}
+The last class of solutions of particular interest to us involve deep-learning based approaches to model the temporal nature of trajectories and some of them also try to account for the social interactions between pedestrians. \cite{saleh_intent_2017} used a long short term memory (LSTM) network\cite{HochSchm97} to preserve patterns in the long past trajectories of pedestrians that is otherwise not preserved in non-gated architectures like the recurrent neural network (RNN)\cite{miikkulainen_simple_2010}. Through an architecture of dual LSTM networks, trajectories were predicted for all surrounding vehicles in \cite{xin_intention-aware_2019}. \cite{dai_modeling_2019} constructed spatiotemporal LSTM that measure not only temporal patterns but also the spatial interactions between multiple vehicles. They also modified the LSTM network so as to limit the vanishing gradient problem.  \cite{alahi_social_2016} has been regarded as a seminal paper that combined the success of an LSTM network and integrated social modeling through a pooling layer. An LSTM network was used to model the plain vanilla behavior of the ego user and his/her neighbors. The hidden states of these neighbors were combined based on their proximity to the ego user and this combined hidden layer was then used for prediction. An excellent review of deep learning approaches for trajectory prediction are present in \cite{sighencea_review_2021}.
+
+\subsubsection{Attention}
+In these deep-learning based frameworks, trajectory prediction is generally considered as a sequence to sequence task, where the past trajectory sequence is used to predict the future trajectory.   \cite{bahdanau_neural_2016} used a novel idea of attention coupled with a RNN to improve performance in a sequence to sequence sentence translation task. Attention selectively focused on certain parts of the input sentence to help generate the translated sequence. \cite{vaswani_attention_2017} also made the idea of self-attention popular, where the attention mechanism relates to different positions of the \textit{same} sequence in order to obtain a representation of that sequence. It is to be noted that both 2,2 use the concept of soft attention. According to \cite{sharma_action_2016}, soft attention models take a weighted average of the entire input space and thus are deterministic and can be trained through backpropagation. Hard attention on the other hand selectively focuses on an approximate area of the input with the help of attention scores (via sampling for example).  After the large success of attention mechanisms in the natural language processing domain, attention is beginning to be used in other domains as well. \cite{xu_show_2016} used the concept of attention to selectively focus on certain areas of an image, to caption these images. Temporal attention has already been used to 
+improve trajectory prediction, to focus selectively on some parts of the past trajectory. Beyond just focusing on some parts of a sequence, the concept of attention can be used instead to focus on certain neighbors of a ego road user, to in-turn incorporate their features in determining the trajectory of the ego-user. \cite{fernando_soft_2017-2} used soft-attention to model the temporal nature of the trajectory and hard-attention for attending to neighbors, where attention weights are calculated based on the distance between road users. However, the attention that road users give each other depend on factors other than distance as well. For example, a road user would mostly be concerned with someone coming in the opposite direction, rather than someone in the same lane.  It would be more natural for a model to learn these dependencies rather than encode these behaviours. In this thesis, we would like to propose a novel soft self-attention approach to model the relationships between various road users and predict future positions of all these road users. The individual past trajectories of road users are encoded through an LSTM network, and then self-attention is applied to the encoded feature vectors of all road users (social self attention) in the scene. As a result, the output vectors of each road user contains information from other road users in the same scene. We hypothesize that this would lead to better trajectory predictions for all road users in a scene. In conclusion, there are 3 models built as follows:
+
+\begin{itemize}
+    \item A dynamic constant velocity model, where the novelty is that parameters are estimated from the data instead of being set heuristically. 
+    \item A plain robust LSTM network that uses the full length past trajectory, to model the future positions of road users.
+    \item A plain LSTM network combined with a novel self-attention encoder to bake in social dependencies between different road users, for better predicting future positions of all road users. 
+\end{itemize}
 
 
 \section{Theory}
@@ -88,7 +113,7 @@ where $\eta_t$ and $\epsilon_t$ are distributed as $N(0,Q)$ and $N(0,R)$ respect
 
 \subsubsection{Estimators of the hidden state}
 
-In the Kalman filter, the primary focus is to obtain estimates of the hidden state $X_{t}$ given the observations $Y_{1:n}$ till time $n$. The estimation of the hidden state $X_t$ at the current time step given data till the current time step $Y_t$  is called as the filtering problem. This can be considered as when $n=t$.  When $n>t$, the problem is called smoothing, where estimates of $X_t$ are estimated given observations in the future. Lastly, when $n<t$ the problem now pertains to prediction as estimate of $X_t$ is obtained only using the observations before $t$. The expectation of $X_t$ given observations $Y_{1:n}$ can be written as: 
+In the Kalman filter, the primary focus is to obtain estimates of the hidden state $X_{t}$ given the observations $Y_{1:n}$ upto time $n$. The estimation of the hidden state $X_t$ at the current time step given data till the current time step $Y_t$  is called as the filtering problem. This can be considered as when $n=t$.  When $n>t$, the problem is called smoothing, where estimates of $X_t$ are estimated given observations in the future. Lastly, when $n<t$ the problem now pertains to prediction as estimate of $X_t$ is obtained only using the observations before $t$. The expectation of $X_t$ given observations $Y_{1:n}$ can be written as: 
 \begin{equation} \label{eq:2}
   X_{t}^n=E(X_t | Y_n)  
 \end{equation}
@@ -111,29 +136,29 @@ The means and covariances defined above give us a good idea about the moments (o
 \subsubsection{Filtering and Prediction}\label{ssec:filtering}
 In the previous section, the filtered, predicted and smoothed estimates were defined, but not calculated. In order to calculate these estimates of means and covariances, there are well defined filtering and smoothing algorithms. In this section and the next, relevant algorithms are presented to compute the estimates defined in the previous section. The proofs for these algorithms and properties are presented in detail in \cite{shumstof2000}. 
 
-For a state space model defined in \ref{eq:1}, assuming the initial conditions as $X_0^0=\mu_0$ and $P_0^0=\Sigma_0$, for $t=1,2...n$
+For a state space model defined in Eq. \ref{eq:1}, assuming the initial conditions as $X_0^0=\mu_0$ and $P_0^0=\Sigma_0$, for $t=1,2...n$
 \begin{equation} \label{eq:6}
     \begin{split}
         X_t^{t-1} &= AX_{t-1}^{t-1}\\
         P_t^{t-1} &= AP_{t-1}^{t-1}A' + Q
     \end{split}
 \end{equation}
-with, 
+with.
 \begin{equation}\label{eq:7}
     \begin{split}
         X_t^{t} &= X_t^{t-1} + K_t(Z_t-CX_t^{t-1})\\
         P_t^{t} &= [I-K_tC]P_t^{t-1}
     \end{split}
 \end{equation}
-with, 
+where 
 \begin{equation}\label{eq:8}
     K_t = P_t^{t-1}C'[CP_t^{t-1}C' + R]^{-1}
 \end{equation}
 
-Here $K_t$ is called as the Kalman gain. This decides the weight that needs to be placed on the measurements relative to the previous state in deciding the next state. If the measurements are accurate, then more weight is placed on the current measurement. When the state is known accurately, the previous state is given importance to predict the next.  Starting from $X_{0}^0$ and $P_0^0$, we can compute the one-step predictive estimates $X_{1}^0$ and $P_{1}^0$ using \ref{eq:6}. Using \ref{eq:7} and \ref{eq:8}, the filter estimates $X_{1}^1$ and $P_{1}^1$ can then be computed. This entire process can be iteratively repeated until $X_{n}^n$ and $P_{n}^n$ are computed. For the case of prediction beyond $t>n$, \ref{eq:6} can be used to compute $X_{n+1}^n$ and $P_{n+1}^n$. The filter distribution $X_{n+1}^{n+1}$ and $P_{n+1}^{n+1}$  can then be assumed to be the same as the predictive distribution. In this way, multi-step ahead prediction would be similar to iteratively stacking multiple one-step predictions. For more detailed proofs regarding \ref{eq:6}, \ref{eq:7} and \ref{eq:8} please refer to \cite{shumstof2000}.
+Here $K_t$ is called as the Kalman gain. This decides the weight that needs to be placed on the measurements relative to the previous state in deciding the next state. If the measurements are accurate, then more weight is placed on the current measurement. When the state is known accurately, the previous state is given importance to predict the next.  Starting from $X_{0}^0$ and $P_0^0$, we can compute the one-step predictive estimates $X_{1}^0$ and $P_{1}^0$ using Eq. \ref{eq:6}. Using Eq. \ref{eq:7} and Eq. \ref{eq:8}, the filter estimates $X_{1}^1$ and $P_{1}^1$ can then be computed. This entire process can be iteratively repeated until $X_{n}^n$ and $P_{n}^n$ are computed. For the case of prediction beyond $t>n$, Eq. \ref{eq:6} can be used to compute $X_{n+1}^n$ and $P_{n+1}^n$. The filter distribution $X_{n+1}^{n+1}$ and $P_{n+1}^{n+1}$  can then be assumed to be the same as the predictive distribution. In this way, multi-step ahead prediction would be similar to iteratively stacking multiple one-step predictions. For more detailed proofs regarding Eq. \ref{eq:6}, Eq. \ref{eq:7} and Eq. \ref{eq:8} please refer to \cite{shumstof2000}.
 
 \subsubsection{Smoothed Estimates}\label{ssec:smoothing}
-For the model specified in \ref{eq:1} with initial conditions $X_n^n$ and $P_n^n$ obtained through \ref{eq:6}, \ref{eq:7} and \ref{eq:8}, for $t = n,n-1,...1,$ 
+For the model specified in Eq. \ref{eq:1} with initial conditions $X_n^n$ and $P_n^n$ obtained through Eq. \ref{eq:6}, Eq. \ref{eq:7} and Eq. \ref{eq:8}, for $t = n,n-1,...1,$ 
 
 \begin{equation}\label{eq:9}
     \begin{split}
@@ -147,7 +172,7 @@ where
     J_{t-1} = P_{t-1}^{t-1}A'[P_{t}^{t-1}]^{-1}
 \end{equation}
 
-Starting from $t=n$, the smoothed estimates can be computed backwards using the filter and predicted estimates obtained in the filtering step. Also the lagged one-step covariance estimates defined in \ref{eq:5} can be obtained through a similar algorithm. Assuming $K_t$,$P_n^n$, $J_t$ are defined from the filtering, smoothing steps and with initial condition 
+Starting from $t=n$, the smoothed estimates can be computed backwards using the filter and predicted estimates obtained in the filtering step. Also the lagged one-step covariance estimates defined in Eq. \ref{eq:5} can be obtained through a similar algorithm. Assuming $K_t$,$P_n^n$, $J_t$ are defined from the filtering, smoothing steps and with initial condition 
 \begin{equation}\label{eq:11}
     P^n_{n,n-1} = (I - K_nC)AP_{n-1}^{n-1}    
 \end{equation}
@@ -192,7 +217,7 @@ A=\begin{pmatrix}1 & \Delta t & 0 & 0
 \end{pmatrix}
 $$
 
-The state space consists of the x-coordinate, velocity along the x-axis, y coordinate and velocity along the y-axis. The matrix $A$ is obtained from the two dimensional form of \ref{eq:13} and it governs the state space transition. 
+The state space consists of the x-coordinate, velocity along the x-axis, y coordinate and velocity along the y-axis. The matrix $A$ is obtained from the two dimensional form of Eq. \ref{eq:13} and it governs the state space transition. 
 
 $$
 Z=\begin{pmatrix}
@@ -220,7 +245,7 @@ If we assume that the random noise is a random acceleration, then through laws o
     \end{split}
 \end{equation}
 
-Here $\eta_{x,t-1}$ and $\eta_{y,t-1}$ are considered to be random noisy accelerations. This can be written in the form of \ref{eq:15} where 
+Here $\eta_{x,t-1}$ and $\eta_{y,t-1}$ are considered to be random noisy accelerations. This can be written in the form of Eq. \ref{eq:15} where 
 $$\eta_t=\begin{pmatrix}
 \frac{\Delta t^2}{2}\eta_{x,t} \\
 \eta_{x,t} \\
@@ -242,10 +267,10 @@ Since $\eta_t \sim N(0,Q)$ , the covariance of the noise matrix $Q$ can be writt
 \eta_{y,t}
 \end{pmatrix})\\
 &=\begin{pmatrix}\frac{\Delta t^4}{4} \sigma_{\eta_x}^2&
-\frac{\Delta t^3}{2}\sigma_{\eta_x}^2 & 0 & 0 \\
-\frac{\Delta t^3}{2}\sigma_{\eta_x}^2 & \sigma_{\eta_x}^2 & 0 & 0 \\
- 0 & 0 & \frac{\Delta t^4}{4} \sigma_{\eta_y}^2 & \frac{\Delta t^3}{2}\sigma_{\eta_y}^2\\
- 0 & 0 & \frac{\Delta t^3}{2}\sigma_{\eta_y}^2 & \sigma_{\eta_y}^2 \\
+\frac{\Delta t^2}{2}\sigma_{\eta_x}^2 & 0 & 0 \\
+\frac{\Delta t^2}{2}\sigma_{\eta_x}^2 & \sigma_{\eta_x}^2 & 0 & 0 \\
+ 0 & 0 & \frac{\Delta t^4}{4} \sigma_{\eta_y}^2 & \frac{\Delta t^2}{2}\sigma_{\eta_y}^2\\
+ 0 & 0 & \frac{\Delta t^2}{2}\sigma_{\eta_y}^2 & \sigma_{\eta_y}^2 \\
 \end{pmatrix}
 \end{aligned}
 \end{equation}
@@ -253,10 +278,10 @@ In the above equation, $E(\eta_{x,t}^2), E(\eta_{y,t}^2)$ is substituted with $\
 
 \begin{equation}\label{eq:18}
     Q=\sigma_\eta^2\begin{pmatrix}
-    \frac{\Delta t^4}{4} & \frac{\Delta t^3}{2} & 0 & 0\\
-    \frac{\Delta t^3}{2} & 1 & 0 & 0\\
-    0 & 0 & \frac{\Delta t^4}{4} & \frac{\Delta t^3}{2} \\
-    0 & 0 & \frac{\Delta t^3}{2} & 1 \\
+    \frac{\Delta t^4}{4} & \frac{\Delta t^2}{2} & 0 & 0\\
+    \frac{\Delta t^2}{2} & 1 & 0 & 0\\
+    0 & 0 & \frac{\Delta t^4}{4} & \frac{\Delta t^2}{2} \\
+    0 & 0 & \frac{\Delta t^2}{2} & 1 \\
     \end{pmatrix}
 \end{equation}
 
@@ -268,14 +293,14 @@ If it is assumed that measurement noise in one direction is independent of the m
      0 & \sigma_{\epsilon y}^2\\
     \end{pmatrix}
 \end{equation}
-It is a design choice to choose appropriate $\sigma_{\eta^2}, \sigma_{\epsilon x}^2, \sigma_{\epsilon y}^2$. Once these parameters are chosen, all the parameters in the model represented by \ref{eq:16} are known. However, in this paper, we aim to estimate some parameters such as these covariance matrices with the help of data. Then the assumption that noise affects the dynamics of motion in a specific way as in \ref{eq:16}, can be disregarded. This also gives us more ability in our design to choose the best parameters through data-centric methods. 
+It is a design choice to choose appropriate $\sigma_{\eta^2}, \sigma_{\epsilon x}^2, \sigma_{\epsilon y}^2$. Once these parameters are chosen, all the parameters in the model represented by Eq. \ref{eq:16} are known. However, in this paper, we aim to estimate some parameters such as these covariance matrices with the help of data. Then the assumption that noise affects the dynamics of motion in a specific way as in Eq. \ref{eq:16}, can be disregarded. This also gives us more ability in our design to choose the best parameters through data-centric methods. 
 
 \subsection{Single trajectory data likelihood and the need for the EM algorithm}
 As mentioned in the previous section, we aim to maximize the likelihood of data and in-turn obtain the maximum likelihood parameters. Let us say that the trajectory length was $n$, the hidden states were ${X_0,X_1,X_2...X_n}$ and the observations were ${Z_1,Z_2,Z_3...,Z_n}$ with the model being described as:
 \begin{equation} \label{eq:20}
 \begin{split}
-      X_{t}=AX_{t-1} + \eta_t \\ 
-      Z_{t}=CX_{t}+\epsilon_t  
+      X_{t}&=AX_{t-1} + \eta_t \\ 
+      Z_{t}&=CX_{t}+\epsilon_t  
 \end{split}
 \end{equation}
 
@@ -289,7 +314,7 @@ It can be assumed that $X_0 \sim N(\mu_0,\Sigma_0)$ where
      0\\
      0
      \end{pmatrix}\\
-     P_0 &= \begin{pmatrix}
+     \Sigma_0 &= \begin{pmatrix}
     100 & 0 & 0 & 0\\
      0 & 100 & 0 & 0 \\
      0 & 0 & 100 & 0\\
@@ -307,7 +332,7 @@ The mean is a zero matrix with the covariance matrix having high uncertainty aro
 \end{split}
 \end{equation}
 
-As can be seen, the log-likelihood is dependent on not just the parameters $A,C, Q$ and $R$, but also on the hidden states. These hidden states are latent and only the estimators of the hidden states can be calculated through properties mentioned in \ref{ssec:filtering} \ref{ssec:smoothing}. At this stage, ideas from the Expectation Maximization (EM) \cite{dempster_maximum_1977} algorithm can be used. EM algorithm is generally used in missing data scenarios, where the likelihood cannot be maximized because the data itself is missing.  In our case, the hidden states can be considered to be missing data and the observed states can be considered as non-missing data. Assuming some model parameters, one can obtain estimators and moments for these hidden states/missing data which can in-turn be used to find the expected data log-likelihood given the current parameters and the observed data. Now, this expected data log-likelihood can be maximized with respect to new parameters and analytical update equations can be obtained for each parameter. This updated parameter can in-turn be used to calculate fresh estimators and moments for the missing data and the process can be repeated until convergence of parameters. It has been shown in \cite{dempster_maximum_1977} that the EM algorithm converges to the maximum likelihood estimate . Therefore, instead of calculating the complete data log-likelihood and maximizing it with respect to the parameters, we can instead use the two-step iterative Expectation Maximization algorithm that briefly entails the following:
+As can be seen, the log-likelihood is dependent on not just the parameters $A,C, Q$ and $R$, but also on the hidden states. These hidden states are latent and only the estimators of the hidden states can be calculated through properties mentioned in sections \ref{ssec:filtering} \ref{ssec:smoothing}. At this stage, ideas from the Expectation Maximization (EM) \cite{dempster_maximum_1977} algorithm can be used. EM algorithm is generally used in missing data scenarios, where the likelihood cannot be maximized because the data itself is missing.  In our case, the hidden states can be considered to be missing data and the observed states can be considered as non-missing data. Assuming some model parameters, one can obtain estimators and moments for these hidden states/missing data which can in-turn be used to find the expected data log-likelihood given the current parameters and the observed data. Now, this expected data log-likelihood can be maximized with respect to new parameters and analytical update equations can be obtained for each parameter. This updated parameter can in-turn be used to calculate fresh estimators and moments for the missing data and the process can be repeated until convergence of parameters. It has been shown in \cite{dempster_maximum_1977} that the EM algorithm converges to the maximum likelihood estimate. Therefore, instead of calculating the data log-likelihood and maximizing it with respect to the parameters, we can instead use the two-step iterative Expectation Maximization algorithm that briefly entails the following:
 \begin{itemize}
     \item Given current values of parameters and the measured data, the expected complete data log-likelihood is calculated through a closed-form expression
     \item Maximize the expected data log-likelihood with respect to the new parameters and update each parameter. These new parameters are then used to again compute the expected data log-likelihood and this iteration continues until parameters converge
@@ -324,7 +349,7 @@ As can be seen, the log-likelihood is dependent on not just the parameters $A,C,
  &+ E[(X_0-\mu_0)'\Sigma_0^{-1}(X_0-\mu_0)|\phi_{j-1},Z_{1:n}] +constant\\
 \end{split}
 \end{equation}
-It can be noticed that the matrix products of each individual term in the summation is a scalar and using the property that $A=trace(A)$ if A is scalar, one can write equation \ref{eq:em1} as follows:
+It can be noticed that the matrix products of each individual term in the summation is a scalar and using the property that $A=trace(A)$ if A is scalar, one can write Eq.  \ref{eq:em1} as follows:
 \begin{equation}
 \begin{split}
      -2E[\log p(X_{0:n},Z_{1:n})] &=n\log |Q|+n\log|R| + \log|\Sigma_0|\\
@@ -389,9 +414,9 @@ and
     M_{XX} &= \sum_{i=1}^n CP_t^nC'+CX_t^n(X_t^n)'C'\\
     \end{split}
 \end{equation}
-All the smoothed estimates $X_t^n,P_t^n,P_{t,t-1}^n$ can be obtained by following the filtering, smoothing steps in \ref{ssec:filtering}, \ref{ssec:smoothing}. Once these smoothing steps are substituted, one can obtain update equations for Q and R as follows:
+All the smoothed estimates $X_t^n,P_t^n,P_{t,t-1}^n$ can be obtained by following the filtering, smoothing steps in section \ref{ssec:filtering}, \ref{ssec:smoothing}. Once these smoothing steps are substituted, one can obtain update equations for Q and R as follows:
 
-Equation \ref{eq:e-step}can be differentiated with respect to $Q^{-1}$ and $R^{-1}$ to obtain:
+Eq. \ref{eq:e-step}can be differentiated with respect to $Q^{-1}$ and $R^{-1}$ to obtain:
 \begin{equation}
 \begin{split}
 \frac{\partial  -2E[\log p(X_{0:n},Z_{1:n})]}{\partial Q^{-1}} &= nQ -[S_{11}-AS_{10}'-S_{10}A'+AS_{00}A'] \\
@@ -406,7 +431,7 @@ Equation \ref{eq:e-step}can be differentiated with respect to $Q^{-1}$ and $R^{-
  R&= \frac{[M_{ZZ}+M_{XZ}-M_{XX}]}{n}\\
 \end{split}
 \end{equation}
-The values of Q and R can be initialized with the heuristic covariance matrices obtained in \ref{ssec:heuristic_Q_R}, by setting $\sigma_\eta^2$, $\sigma_{\epsilon x}^2$ and $\sigma_{\epsilon y}^2$ as 1, 0.01 and 0.01 respectively.
+The values of Q and R can be initialized with the heuristic covariance matrices obtained in section \ref{ssec:heuristic_Q_R}, by setting $\sigma_\eta^2$, $\sigma_{\epsilon x}^2$ and $\sigma_{\epsilon y}^2$ as 1, 0.01 and 0.01 respectively.
 \begin{equation}\label{eq:init2}
 \begin{split}
      Q_0 &= \sigma_\eta^2\begin{pmatrix}
@@ -451,7 +476,7 @@ By solving similar steps as in the above equations we obtain update equations as
 \end{split}
 \end{equation}
 
-A similar update step can also be used to obtain maximum likelihood estimates for the other parameters $A,C$. The EM algorithm can thus be iteratively used until convergence of all parameters and more details about the implementation of this algorithm is present in \ref{alg:em}. 
+A similar update step can also be used to obtain maximum likelihood estimates for the other parameters $A,C$. The EM algorithm can thus be iteratively used until convergence of all parameters and more details about the implementation of this algorithm is present in Algorithm \ref{alg:em}. 
 
 
 \subsection{Constant Acceleration model}
@@ -494,7 +519,7 @@ $$
 The observed state contains the observed positions as before. The matrix $C$ is responsible for obtaining positions from the hidden state. As before $\eta$ and $\epsilon$ are normally distributed with 0 mean and covariance matrices $Q$ and $R$ respectively. The parameter estimation approach discussed in the previous section can also be extended to the constant acceleration model. The only difference is that certain parameters have different values and dimensions for parameters $A,C,Q$ and $R$.
 
 \subsection{Neural Network based Architectures}
-The construction of a Kalman filter makes it very intuitive to use on time series data. However, a Kalman filter suffers from some limitations. Mainly, a Kalman filter cannot model non-linear distributions as all dependencies are linear. There are other non-linear state space models which can be used as an alternative to the Kalman filter. However, due to reasons discussed later in \ref{ssec:vanilla_lstm}, we resort to explore neural network based architectures. The subsequent sections aim to introduce the foundations and intuitions behind the mechanics of various neural network architectures.  
+The construction of a Kalman filter makes it very intuitive to use on time series data. However, a Kalman filter suffers from some limitations. Mainly, a Kalman filter cannot model non-linear distributions as all dependencies are linear. There are other non-linear state space models which can be used as an alternative to the Kalman filter. However, due to reasons discussed later in section \ref{ssec:vanilla_lstm}, we resort to explore neural network based architectures. The subsequent sections aim to introduce the foundations and intuitions behind the mechanics of various neural network architectures.  
 
 \subsubsection{Artificial Neural Networks}
 In many machine learning tasks, one would want to approximate the dependent variable $Y$ as a function of independent variables $X$.
@@ -523,7 +548,7 @@ Here $a^1_j$ is the output at the $j^{th}$ neuron of the first hidden layer and 
 \end{equation}
 Here $n_{l-1}$ refers to the size of the last hidden layer $l-1$ and the output at the $j^{th}$ neuron is calculated as the dot product of the hidden layer output with the output neuron weights added to the bias of the output neuron. An activation function may/ may not be applied here, depending on the target feature. If the target feature is categorical, it may be useful to use a sigmoid function activation that squishes the values between 0 and 1. This entire transformation of input through multiple hidden layers and activations to the final output is termed as a forward pass. 
 
-Most of the ingenuity in an Artificial Neural network lies in tuning the weights and biases of these networks, given the target data. Having computed the "predicted" outputs from the forward pass, it becomes paramount to construct some error metric to gauge the difference between predicted and actual target vectors. In most cases a simple mean squared error metric can be utilized. The problem can now be termed as minimizing this loss function/error metric, by fine-tuning the weights of the network. This loss function represented by $F(x)$ is multi-variate, as it is dependent on many weights and biases. The loss function reduces the fastest in the direction of its negative gradient. Using this observation, the weights can be updated as below
+Most of the ingenuity in an Artificial Neural network lies in tuning the weights and biases of these networks, given the target data. Having computed the "predicted" outputs from the forward pass, it becomes paramount to construct some error metric to gauge the difference between predicted and actual target vectors. For the problem of regression, a simple mean squared error metric can be utilized. The problem can now be termed as minimizing this loss function/error metric, by fine-tuning the weights of the network. This loss function represented by $F(x)$ is multi-variate, as it is dependent on many weights and biases. The loss function reduces the fastest in the direction of its negative gradient. Using this observation, the weights can be updated as below
 \begin{equation}
     \begin{split}
         W_{n+1}=W_n-\alpha\nabla F(W_n)
@@ -540,7 +565,7 @@ The chain rule can be applied multiple times to compute gradients backwards for 
 The idea for training the network is to compute the loss function for the entire data (such as MSE for the entire data) and then use backpropagation to tune the weights and repeat the process until convergence. However, this becomes computationally slow and also requires loading the entire dataset into the memory. On the other hand loss and gradients can only be calculated for every data point in our dataset and gradient updates can be made for every forward pass. This is called as stochastic gradient descent\cite{Robbins&Monro:1951}, but this gives noisy updates to the parameters. In practise, the solution is to combine these two ideas to feed-forward min-batches of data through the network. For every mini-batch, loss and gradients are computed and weights are updated. A complete pass through the entire dataset is called an epoch. The network is trained through multiple epochs until the error estimate/loss function starts converging. 
 
 \subsubsection{Recurrent Neural Networks}
-The working of a recurrent neural network (RNN) shares similarities to the working of an Artificial Neural Network. Both ANNs and RNNs contain layers and activation functions with many parameters that are tuned to approximate the target variable $Y$ as a function of input features $X$. However, the ANN cannot be used to model temporal dependencies in the data. RNNs on the other hand have proven to be a modern standard in dealing with time series data. The intuition behind how RNN deals with temporal data can be understood by borrowing some concepts studied in the Kalman Filter section. In the Kalman Filter, there is a hidden state that affects the measured output. At the same time, the hidden state itself is temporal in nature as the next hidden state is dependent on the previous hidden states. As a result of this cross-dependence, the output states themselves are temporally related to each other. The Elman network \cite{miikkulainen_simple_2010} introduced in 1990 which is one of the most widely used RNN variant uses this concept of a hidden state to good use. 
+The working of a recurrent neural network (RNN) shares similarities to the working of an Artificial Neural Network. Both ANNs and RNNs contain layers and activation functions with many parameters that are tuned to approximate the target variable $Y$ as a function of input features $X$. However, the standard ANN cannot be used to model temporal dependencies in the data. RNNs on the other hand have proven to be a modern standard in dealing with time series data. The intuition behind how RNN deals with temporal data can be understood by borrowing some concepts studied in the Kalman Filter section. In the Kalman Filter, there is a hidden state that affects the measured output. At the same time, the hidden state itself is temporal in nature as the next hidden state is dependent on the previous hidden states. As a result of this cross-dependence, the output states themselves are temporally related to each other. The Elman network \cite{miikkulainen_simple_2010} introduced in 1990 which is one of the most widely used RNN variant uses this concept of a hidden state to good use. 
 \begin{equation}
 \begin{split}
     h_t&=\sigma_h(W_hx_t+U_{h}h_{t-1}+b_h)\\
@@ -585,7 +610,7 @@ In the figure above, the rectangular boxes are fully connected layers with train
             C_t&=f_t*C_{t-1}+i_t*\tilde{C_t}
         \end{split}
     \end{equation}
-    \item Lastly, the concatenated input vector is passed through another feedforward layer with a sigmoid activation,also referred to as the output gate. The tanh function is applied on the cell state and the vector from the output gate is element wise multiplied to obtain the new hidden state. This essentially regulates what information from the cell state needs to be passed on to the hidden state.
+    \item Lastly, the concatenated input vector is passed through another feedforward layer with a sigmoid activation, also referred to as the output gate. The tanh function is applied on the cell state and the vector from the output gate is element wise multiplied to obtain the new hidden state. This essentially regulates what information from the cell state needs to be passed on to the hidden state.
     \begin{equation}
         \begin{split}
             o_t&=\sigma(W_o[h_{t-1},x_t]+b_o)\\
@@ -598,19 +623,27 @@ In the figure above, the rectangular boxes are fully connected layers with train
 It can be shown that in these kinds of gated units, the gradients don't vanish exponentially fast because of the cell state and that's why it becomes pertinent to use LSTMs in long-trajectory time-series methods. 
 
 \subsubsection{Self Attention and Transformer Encoders}
-Self attention was a concept first discussed in \cite{vaswani_attention_2017} , which aimed at computing similarity scores between words in a sentence. For example in the sentence "John went to the store because he wanted milk", the word "he" needs to be associated with "John". Self attention is the mechanism through which the model understands these kind of inter-sentence dependencies. In our case, we have multiple road users traversing and each of their behaviors is influenced by some other road user's behavior. Therefore it becomes important to try and bake these inter road user dependencies in the model.  We propose to use the self attention mechanism in our problem through a transformer encoder architecture. The transformer encoder architecture was introduced in the same paper, where the transformer was used to process an entire sentence as a whole in a non-recurrent fashion. The recurrent nature of LSTMs or RNNs made their performance dependent on whether the hidden state was preserving information from previous time steps. By processing entire sequences as one, the Transformer architecture had no risk of losing past information. Through this section, this architecture and its constituent building block of self attention will be discussed in detail. 
+Self attention was a concept first discussed in \cite{vaswani_attention_2017}, which aimed at computing similarity scores between words in a sentence. For example in the sentence "John went to the store because he wanted milk", the word "he" needs to be associated with "John". Self attention is the mechanism through which the model understands these kind of inter-sentence dependencies. In our case, we have multiple road users traversing and each of their behaviors is influenced by some other road user's behavior. Therefore it becomes important to try and bake these inter road user dependencies in the model.  We propose to use the self attention mechanism in our problem through a transformer encoder architecture. The transformer encoder architecture was introduced in the same paper, where the transformer was used to process an entire sentence as a whole in a non-recurrent fashion. The recurrent nature of LSTMs or RNNs made their performance dependent on whether the hidden state was preserving information from previous time steps. By processing entire sequences as one, the Transformer architecture had no risk of losing past information. Transformers have revolutionized the field of natural language processing and computer vision, because of their capability to adapt to different tasks. Through this section, this architecture and its constituent building block of self attention will be discussed in detail. 
 
-The transformer encoder architecture consists of a self attention layer followed by a feed forward layer. Let us say that the input to the transformer architecture is a feature vector, where a feature vector somehow represents the individual behavioural state of one road user. At a particular point of time, we may have multiple road users and thus a collection of feature vectors collected into a matrix. Let us assume that there are $f$ feature vectors and $d$ is the dimension of each feature vector also called as the embedding dimension. 
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.4]{theory/transformer.png}
+\caption{Transformer Architecture}
+\label{fig:transformer}
+\end{figure}
+
+The transformer encoder architecture consists of a self attention layer followed by a feed forward layer. Let us say that the input to the transformer architecture is a feature vector, where a feature vector somehow represents the individual behavioural state of one road user. At a particular point of time, we may have multiple road users and thus a collection of feature vectors collected into a matrix. Let us assume that there are $p$ feature vectors and $d$ is the dimension of each feature vector also called as the embedding dimension. 
 \begin{equation}
     \begin{split}
-        Q&=W_QX\\
-        K&=W_KX\\
-        V&=W_VX\\
+        Q&=XW_Q\\
+        K&=XW_K\\
+        V&=XW_V\\
     \end{split}
 \end{equation}
-The feature matrix ($X$) we have is firstly multiplied with three trainable parameter matrices $W_Q$, $W_K$ and $W_V$. Each of these matrices have a dimension of $d \times w$. Therefore for each feature vector we obtain a query vector, a key vector and a value vector. As a matrix, we obtain the query ($Q$), key ($K$) and value matrices($V$) of dimension $f \times w$. 
+The feature matrix ($X$) we have is firstly multiplied with three trainable parameter matrices $W_Q$, $W_K$ and $W_V$. Each of these matrices have a dimension of $d \times w$. Therefore for each feature vector we obtain a query vector, a key vector and a value vector. As a matrix, we obtain the query ($Q$), key ($K$) and value matrices($V$) of dimension $p \times w$. 
 
-Next, the query matrix is multiplied with the transpose of the key matrix. To understand the intuition behind this, let us say that $f=2$ or that there are two feature vectors. Therefore the resulting $QK^T$ will be a $2 \times 2$ matrix. 
+Next, the query matrix is multiplied with the transpose of the key matrix. To understand the intuition behind this, let us say that $p=2$ or that there are two feature vectors. Therefore the resulting $QK^T$ will be a $2 \times 2$ matrix. 
 \begin{figure}[H]
 \centering
 \includegraphics[scale=0.4]{theory/example.png}
@@ -638,14 +671,7 @@ There can also be multiple-attention heads where there are multiple $W_Q$, $W_K$
     \end{split}
 \end{equation}
 
-Each feature vector in the $Z_{net}$ matrix is then passed through two feed-forward layers, with the first feed-forward layer having a ReLu activation to obtain $Z_{out}$. The input and the output of both the multiple-attention head layer and the feed-forward layer are added and layer normalization is applied. These connections between the input and the output is termed as a residual connection and is implemented for the practical purpose of limiting the vanishing gradient problem. At the end of the transformer encoder, an output feature vector is produced for each feature vector input. The $n^{th}$ output feature vector incorporates information from all the input features with respect to the $n^{th}$ input feature vector. The details regarding how these neural network architectures are implemented for the specific problem in our thesis is elaborated in the method section 
-
-\begin{figure}[H]
-\centering
-\includegraphics[scale=0.4]{theory/transformer.png}
-\caption{Transformer Architecture}
-\label{fig:transformer}
-\end{figure}
+Each feature vector in the $Z_{net}$ matrix is then passed through two feed-forward layers, with the first feed-forward layer having a ReLu activation to obtain $Z_{out}$. The input and the output of both the multiple-attention head layer and the feed-forward layer are added and layer normalization is applied. These connections between the input and the output is termed as a residual connection and is implemented for the practical purpose of limiting the vanishing gradient problem. At the end of the transformer encoder, an output feature vector is produced for each feature vector input. The $n^{th}$ output feature vector incorporates information from all the input features with respect to the $n^{th}$ input feature vector. The details regarding how these neural network architectures are implemented for the specific problem in our thesis is elaborated in the section \ref{ssec:tlstm}\ref{ssec:vanilla_lstm} 
 
 \section{Data}
 Through this section, we present details regarding the features, quantity and quality of data. Further, through data exploration and visualization, key facets and characteristics of the data is presented. Lastly, important pre-processing steps that suitably mould the data for later algorithms are enumerated. 
@@ -659,15 +685,14 @@ The data has been supplied by Viscando, whose technology tracks all road users t
 \begin{subfigure}{.5\textwidth}
   \centering
   \includegraphics[width=.6\linewidth]{data/Data_1.png}
-  \caption{Sensor's field of view}
   \label{fig:sensor}
 \end{subfigure}%
 \begin{subfigure}{.5\textwidth}
   \centering
   \includegraphics[width=.325\linewidth]{data/ground.png}
-  \caption{Top view of the frame}
   \label{fig:top_view}
 \end{subfigure}
+\caption{Top view of sensor placement and sensors' field of view}
 \label{fig:sensor_view}
 \end{figure}
 
@@ -696,7 +721,7 @@ The data has been supplied by Viscando, whose technology tracks all road users t
 \label{fig:trajectories}
 \end{figure}
 
-As can be seen from \ref{fig:top_view}, the field of vision of the sensor covers an area of $70 \times 21$ metre squared. 
+As can be seen from Fig. \ref{fig:sensor_view}, the field of vision of the sensor covers an area of $70 \times 21$ metre squared. 
 
 \begin{figure}[H]
 \centering
@@ -721,7 +746,7 @@ Speed & Tracked speed of a road user&Continuous \\
 Type & Indicator for cyclist, pedestrian and shuttle & Categorical\\
 \hline
 \end{tabular}
-\caption{\label{tab:features}Characteristics of each road user in the dataset}
+\caption{\label{tab:features}Definition and type of variables in the dataset}
 \end{center}
 \end{table}
 
@@ -746,36 +771,55 @@ Shuttles & 208 & 6.6 &21\\
 
 \subsection{Data Manipulation}
 Through the analysis of sampling times, there was an interesting observation made. Sampling time is defined as the time difference between any two consecutive observations for the same road user. It can also be thought of as the inverse of sensor frequency, where the sensor frequency is defined as number of frames captured per second. The table below shows the distribution of sampling time in the data.
-\begin{figure}[H]
+
+
+
+\begin{table}[H]
+\parbox{.45\linewidth}{
 \centering
-\begin{subfigure}{0.5\textwidth}
-  \centering
-  \includegraphics[width=.8\linewidth]{data/tab1.png}
-  \caption{ Distribution of Sampling times}
-  \label{fig:sampling_time}
-\end{subfigure}%
-\begin{subfigure}{0.5\textwidth}
-  \centering
-  \includegraphics[width=.8\linewidth]{data/tab2.png}
-  \caption{Common time axis based data}
-  \label{fig:common_axis_data}
-\end{subfigure}
-\label{fig:sampling}
-\end{figure}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Sampling Times (in seconds) & Frequency\\ \midrule
+Between 0.05 and 0.2 & 3540\\ 
+0.24 & 822904 \\  
+Between 0.3 and 1.5 & 8524 \\  
+Greater than 1.5 & 4472 \\
+
+%\bottomrule
+\end{tabular}
+\caption{Distribution of sampling times}
+\label{table:sampling_time}
+}
+\hfill
+\parbox{.45\linewidth}{
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Times & User 1 & User 2 & User 3 \\ \midrule
+09:10:40:00  & $[x_1,y_1]$ & $[x_2,y_2]$ & $[x_3,y_3]$ \\
+09:10:40:20 & $[x_1',y_1']$ & $[x_2',y_2']$ & $[x_3',y_3']$\\
+09:10:40:40 & $[x_1'',y_1'']$ & $[x_2'',y_2'']$ & $[x_3'',y_3'']$\\
+09:10:41:00 & $[x_1''',y_1''']$ & $[x_2''',y_2''']$ & $[x_3''',y_3''']$\\
+%\bottomrule
+\end{tabular}
+\caption{Aligned road users' data}
+\label{table:common_axis_data}
+}
+\end{table}
 
 
-It is seen that the sampling time is not constant throughout the data. Most of the data has a sampling time of 0.24 seconds. However, there are cases where the sampling time is higher/lower. It is important to maintain a constant sampling time, because then we can have a common time axis for all road users. Then, one can align different road user's data as \ref{fig:common_axis_data}, and at any particular time, the positions of all road users in the frame are known. In order to make the sampling time uniform, positions and speeds of road users need to be calculated for a common time scale. It was decided to choose a time scale of 0.2 seconds because of its proximity to the most frequent sampling time (0.24 seconds) and for convenience. Let us say a road user's position was known at 0.24, 0.48,0.72, 0.96 seconds the road user's position at 0.2, 0.4, 0.6, 0.8 and 1 second needed to estimated. Simple cubic interpolation was used to interpolate positions and speeds to the nearest $0.2^{th}$ second. Now the data had a uniform sampling time of 0.2 seconds. By taking the $5^{th}$ observation of every road user, dataset with a sampling time of 1 second was also  created.  Thus, there were two final datasets each with sampling times of 0.2 second and 1 second respectively. 
+It is seen that the sampling time is not constant throughout the data. Most of the data has a sampling time of 0.24 seconds. However, there are cases where the sampling time is higher/lower. It is important to maintain a constant sampling time, because then we can have a common time axis for all road users. Then, one can align different road user's data as Table \ref{table:common_axis_data}, and at any particular time, the positions of all road users in the frame are known. In order to make the sampling time uniform, positions and speeds of road users need to be calculated for a common time scale. It was decided to choose a time scale of 0.2 seconds because of its proximity to the most frequent sampling time (0.24 seconds) and for convenience. Let us say a road user's position was known at 0.24, 0.48,0.72, 0.96 seconds the road user's position at 0.2, 0.4, 0.6, 0.8 and 1 second needed to estimated. Simple cubic interpolation was used to interpolate positions and speeds to the nearest $0.2^{th}$ second. Now the data had a uniform sampling time of 0.2 seconds. By taking the $5^{th}$ observation of every road user, dataset with a sampling time of 1 second was also  created.  Thus, there were two final datasets each with sampling times of 0.2 second and 1 second respectively. 
 
 \subsection{Data processing for recurrent neural networks}
 
-Every road user maps out a trajectory which keeps evolving as the road user moves through the frame. In order to predict where the road user will be in the future, his/her past trajectory is of utmost importance. Therefore, it is desired that the network predicts the coordinates at time step $t+s$ given the input trajectory until time $t$. For the network to be able to do its best job predicting, data needs to be packaged in an $[input^{1}_t,target^{1}_t]$ fashion where input represents what the network needs to know about road user 1 in order to predict the target. The input trajectory of a road user 1 at time $t$ consist of feature representations from each time step $1,2,...t$  of his/her trajectory . In turn each of these feature representations at time $k$ are the road user's position ($x^1_k,y^1_k$) and two dummy variables ($ped,shu$) signifying whether the road user is a pedestrian or cyclist. Notice that these two dummy variables will be the same for each time step $t=1,2...n$. The target feature is the position of road user s steps later, or in other words, $x^{1}_{t+s},y^{1}_{t+s}$  needs to be predicted. The data structure also called called as the \textit{Individual Trajectories} data structure will consist of two columns $[input,target]$ and the equations below help in understanding how each row of $[input,target]$ will look like \ref{eq:transformers_data} . The Kalman Filter EM Algorithm and the Vanilla LSTM network introduced later in \ref{ssec:CV_model}, \ref{ssec:vanilla_lstm} will be trained on this data structure after applying some exclusions that is mentioned later in \ref{ssec:exclusions}. 
+Every road user maps out a trajectory which keeps evolving as the road user moves through the frame. In order to predict where the road user will be in the future, his/her past trajectory is of utmost importance. Therefore, it is desired that the network predicts the coordinates at time step $t+s$ given the input trajectory until time $t$. For the network to be able to do its best job predicting, data needs to be packaged in an $[input^{1}_t,target^{1}_t]$ fashion where input represents what the network needs to know about road user 1 in order to predict the target. The input trajectory of a road user 1 at time $t$ consist of feature representations from each time step $1,2,...t$  of his/her trajectory . In turn each of these feature representations at time $k$ are the road user's position ($x^1_k,y^1_k$) and two dummy variables ($ped,shu$) signifying whether the road user is a pedestrian or cyclist. Notice that these two dummy variables will be the same for each time step $t=1,2...n$. The target feature is the position of road user s steps later, or in other words, $x^{1}_{t+s},y^{1}_{t+s}$  needs to be predicted. The data structure also called as the \textit{Individual Trajectories} data structure will consist of two columns $[input,target]$ and the equations below help in understanding how each row of $[input,target]$ will look like Eq. \ref{eq:lstm_data} . The Kalman Filter EM Algorithm and the Vanilla LSTM network introduced later in section \ref{ssec:CV_model}, \ref{ssec:vanilla_lstm} will be trained on this data structure after applying some exclusions that is mentioned later in \ref{ssec:exclusions}. 
 \begin{equation}\label{eq:lstm_data}
     \begin{split}
         input^{1}_t&=[[x^{1}_1,y^{1}_1,ped,shu],[x^{1}_2,y^{1}_2,ped,shu],...[x^{1}_t,y^{1}_t,ped,shu]]\\
         target^{1}_t&=[x^{1}_{t+s},y^{1}_{t+s}]
     \end{split}
 \end{equation}
-If the data is structured in a different way, there is more information that can be leveraged. In the above representation, the input features at time $t$ consist of a road user's past trajectory and the target feature consists of the road user's future trajectory. However, at  time $t$ there may be $m$ multiple road users in the scene, influencing each other's behaviour. At time $t$ it would certainly be more interesting to tell the network that there are other road users in different coordinates at the same time. Thus, the input feature needs to be packaged such that all the current road users' trajectories are present. Consequently the target feature should consist of all the road users' future coordinates. Therefore the representation of the entire scene (and not just one road user) at time $t$ $[input_t,target_t]$ will look as in \ref{eq:transformers_data}. The data structure called as the \textit{Frames} data structure will consists of multiple rows of such frames and the Attention based LSTM network introduced later in Section will be trained on this kind of a data structure
+If the data is structured in a different way, there is more information that can be leveraged. In the above representation, the input features at time $t$ consist of a road user's past trajectory and the target feature consists of the road user's future trajectory. However, at  time $t$ there may be $m$ multiple road users in the scene, influencing each other's behaviour. At time $t$ it would certainly be more interesting to tell the network that there are other road users in different coordinates at the same time. Thus, the input feature needs to be packaged such that all the current road users' trajectories are present. Consequently the target feature should consist of all the road users' future coordinates. Therefore the representation of the entire scene (and not just one road user) at time $t$ $[input_t,target_t]$ will look as in Eq. \ref{eq:transformers_data}. The data structure called as the \textit{Frames} data structure will consists of multiple rows of such frames and the Attention based LSTM network introduced later in \ref{ssec:tlstm} will be trained on this kind of a data structure. 
 \begin{equation}\label{eq:transformers_data}
     \begin{split}
         input_t&=[input^{1}_t,input^{2}_t...input^{m}_t]\\
@@ -791,12 +835,12 @@ When analyzing the distributions of speed, there were some observations which ha
 
 It is also mandated that the trajectory of a road user consists of at least two seconds (which is two timesteps steps in a 1 second sampled data and 10 timesteps in a 0.2 second sampled data) for future predictions. This is done so that there is enough input to the network, before a network starts predicting. This serves the purpose of eliminating noise from too few observations to make a prediction. This exclusion is applied to all these datasets. 
 
-There are some interesting cases when making the \textit{Frame} data structure. There may be three road users at the time of observation, but $s$ time steps later, one of them (or all) may have left the frame. In this case for the missing road user who left the frame, the target features are populated as NaNs (not a number/missing value). As mentioned later \ref{ssec:tlstm}, the network does not calculate loss over these cases. There may be also be cases where a new road user entering the scene has just one second of data, whereas all other road users have history that extends multiple seconds into the past. Thus, one row of the \textit{Frame} data structure has some road users with a good past and some road users without the minimum two seconds.  One option here would be to remove this new road user from the observation (input) and prediction (target). However, that road user, even with one observation, may be influencing the scene. Therefore his/her data removal may violate the natural social structure present in the scene. In order to avoid this problem , that entire timestamp's scene is removed from the data $[input_t,target_t]$. In the next timestamp, this new road user will have two prior timesteps of features and if no other road users freshly enter the scene, this scene is included for training. 
+There are some interesting cases when making the \textit{Frames} data structure. There may be three road users at the time of observation, but $s$ time steps later, one of them (or all) may have left the frame. In this case for the missing road user who left the frame, the target features are populated as NaNs (not a number/missing value). As mentioned later in Section \ref{ssec:tlstm}, the network does not calculate loss over these cases. There may be also be cases where a new road user entering the scene has just one second of data, whereas all other road users have history that extends multiple seconds into the past. Thus, one row of the \textit{Frames} data structure has some road users with a good past and some road users without the minimum two seconds.  One option here would be to remove this new road user from the observation (input) and prediction (target). However, that road user, even with one observation, may be influencing the scene. Therefore his/her data removal may violate the natural social structure present in the scene. In order to avoid this problem , that entire timestamp's scene is removed from the data $[input_t,target_t]$. In the next timestamp, this new road user will have two prior timesteps of features and if no other road users freshly enter the scene, this scene is included for training. 
 
-Another interesting case that is observed in the \textit{Frame} data structure is that two pedestrians/ two cyclists are very close to each other throughout their trajectory. Sometimes the distance between the two road users is 0 throughout the trajectory. This means that one of the road users was detected as two road users. These kinds of observations were removed from the dataset. Also, two road users can be quite close to each other when they are walking. For example, if acquaintances are walking together, they do not maintain a lot of distance between them. A heuristic cutoff of 20 cm is used as the minimum distance between any pair of road users throughout their trajectory. This means that if two road users maintain a distance of less than 20 cm throughout their trajectory, only one road user is considered as we assume that two road users were detected as one. 
+Another interesting case that is observed in the \textit{Frames} data structure is that two pedestrians/ two cyclists are very close to each other throughout their trajectory. Sometimes the distance between the two road users is 0 throughout the trajectory. This means that one of the road users was detected as two road users. These kinds of observations were removed from the dataset. Also, two road users can be quite close to each other when they are walking. For example, if acquaintances are walking together, they do not maintain a lot of distance between them. A heuristic cutoff of 20 cm is used as the minimum distance between any pair of road users throughout their trajectory. This means that if two road users maintain a distance of less than 20 cm throughout their trajectory, only one road user is considered as we assume that two road users were detected as one. 
 
 
- The \textit{Individual Trajectories} data structure can be used for the Kalman Filter training and for the Vanilla LSTM network. The \textit{Frame} data structure can be used for the attention based LSTM network's training as this network tries to model the social behavior. To make matters more convenient, the trajectories present in the \textit{Frame} data structure is used to train the Kalman Filter network, LSTM network and the Attention based LSTM network. This is because it would be interesting to see how these methods compare when trained on the same data.
+ The \textit{Individual Trajectories} data structure can be used for the Kalman Filter training and for the Vanilla LSTM network. The \textit{Frame} data structure can be used for the attention based LSTM network's training as this network tries to model the social behavior. To make matters more convenient, the trajectories present in the \textit{Frames} data structure is used to train the Kalman Filter network, LSTM network and the Attention based LSTM network. This is because it would be interesting to see how these methods compare when trained on the same data.
 
 \section{Methodology}
 In this section, the rationale behind choosing the methods mentioned in the theory is elaborated. Further implementing this theoretical method on the specific data is presented in more detail. 
@@ -1054,12 +1098,33 @@ Total & NA & -2.7 \\    \midrule
 \subsection{Hyperparameter-tuning}
 \subsubsection{Vanilla LSTM}
 For the vanilla-LSTM, the number of layers and the size of hidden layers are two important hyperparameters. To tune them, a coarse grid hyperparameter tuning was performed where the different networks were trained on different parameters. The networks' test and validation MSE is shown below:
-
-\begin{figure}[H]
+% Please add the following required packages to your document preamble:
+% \usepackage{booktabs}
+% \usepackage{multirow}
+% \usepackage[table,xcdraw]{xcolor}
+% If you use beamer only pass "xcolor=table" option, i.e. \documentclass[xcolor=table]{beamer}
+\begin{table}[H]
 \centering
-\includegraphics[scale=0.5]{result/res1.png}
-\caption{Hyperparameter tuning for the Vanilla LSTM network}
-\end{figure}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+\multicolumn{1}{l}{Hidden Layer Size} & \multicolumn{1}{l}{Number of  LSTM layers} & \multicolumn{1}{l}{Validation MSE} \\ \midrule
+                                      & 2                                          & 1.18                               \\
+                                      & 3                                          & 1.16                               \\
+\multirow{-3}{*}{10}                  & 4                                          & 1.16                               \\ \midrule
+                                      & 2                                          & 1.13                               \\
+                                      & 3                                          & 1.13                               \\
+\multirow{-3}{*}{16}                  & 4                                          & 1.10                               \\ \midrule
+                                      & 2                                          & 1.09                               \\
+                                      & 3                                          & 1.12                               \\
+\multirow{-3}{*}{20}                  & 4                                          & 1.09                               \\ \midrule
+                                      & 2                                          & 1.08                               \\
+                                      & 3                                          & 1.09                               \\
+\multirow{-3}{*}{25}                  & 4                                          & 1.07                               \\ \midrule
+                                      & 2                                          & \cellcolor[HTML]{32CB00}1.05       \\
+                                      & 3                                          & 1.05                               \\
+\multirow{-3}{*}{28}                  & 4                                          & 1.05                               \\ \bottomrule
+\end{tabular}
+\end{table}
 
 As can seen from the figure above, the test MSE is very similar for the last three entries and the least complex network was chosen (highlighted in green)
 \subsubsection{Self Attention based LSTM}
@@ -1089,6 +1154,281 @@ Also, the hypothesis is that the self-attention model fares better than the Vani
 \includegraphics[scale=0.6]{result/res5.png}
 \caption{Ratio of MSE between the Attention based vs Vanilla architecture}
 \end{figure}
+
+\subsection{Qualitative Analysis}
+The above section dealt with quantitatively comparing different models. It would also be interesting to assess the behaviors that these models try to capture. Therefore this section is dedicated to visualizing predictions made by these models, in an attempt to delineate these models better.
+
+\begin{figure}[H]
+\centering
+\includegraphics[scale=0.3]{quali_results/ground.jpg}
+\caption{Map of the ground frame}
+\end{figure}
+
+
+For convenience, in all the figures above the vertical axis is called as the y-axis and the horizontal axis is called as the x-axis. Pedestrians and cyclists usually move longitudinally along the y-axis and in some instance take turns or slight maneuvers so that their x-coordinate also changes. Along the left end of the image there is an entrance to the building and cycles are parked along the left border of the image. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/hist-ped.png}
+  \caption{Pedestrians}
+  \label{fig:cyc-1-1}
+\end{subfigure}%
+\begin{subfigure}{0.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/hist-cycle.png}
+  \caption{Cyclists}
+  \label{fig:cyc-1-2}
+\end{subfigure}
+\caption{Distribution of x-coordinates for road users}
+\label{fig:cyc-1}
+\end{figure}
+
+As seen in the above image, cyclists generally  move closer to the center of the axis. Pedestrians usually traverse on the ends of the frame, specifically on the right as there is a pedestrian walkway present there. 
+
+
+In all the figures from here on, the solid black line represents the past trajectory, the dotted-line represents the future trajectory. In some images, an arrow will be showcased to illustrate the start position and direction of the road user.  The blue, green and red crosses represents the 3-step ahead prediction for the constant velocity model, vanilla LSTM network (referred to as the LSTM network) and the Transformer/Attention based LSTM network (for convenience this is called as the TLSTM network). For conveniences,each of these trajectories are also labelled with the type of road user (Cyclist, Pedestrian, Shuttle) and a unique ID (1,2,3..) for each road user to isolate and differentiate trajectories. Also the frame number added to the images indicate the moment from which predictions are being made. Frame 1 signifies the  prediction made from the first 2 seconds of trajectory input, frame 2 signifies the prediction made the first 3 seconds of input and so on.
+After individually studying many trajectories and running simulations of the videos, some behaviors were seen for the various models on the given data. It is to be pointed out that the trends seen here aren't a representative trend for the entire dataset and is rather a representative from a sample. These samples were obtained by looking at entries where one model's error is lower compared to the other models, so that the behaviors captured/missed by the models are assessed. 
+
+\subsubsection{CV model vs LSTM based models}
+There are quite a few instances where the Constant Velocity models are not able to capture behaviors that are captured well by the LSTM based models. The first of these instances is when the constant velocity model is not able to capture self-corrections made by pedestrians and cyclists alike. This is when a pedestrian/cyclist is correcting his/her course, so that their trajectory is not obtuse and is parallel to one of the axes.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-0-1.png}
+  \caption{Cyclist 0 -Frame 1}
+  \label{fig:cyc0-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-0-2.png}
+  \caption{Cyclist 0 - Frame 2}
+  \label{fig:cyc0-2}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/first-1.png}
+  \caption{Cyclist 1 Frame 1}
+  \label{fig:cyc1-1}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/first-2.png}
+  \caption{Cyclist 1 Frame 2}
+  \label{fig:cyc1-2}
+\end{subfigure}
+\caption{Course correction trajectories for road users }
+\label{fig:cyc1&2}
+\end{figure}
+
+As can be seen from Fig. \ref{fig:cyc1&2} usually pedestrians and cyclists tend to correct their course, so that they move parallel to the y-axis. This kind of behavior is not captured by a CV model as they tend to just extrapolate current state dynamics forward in time and don't recognize such spatial dependencies. This maneuver was frequently exhibited by pedestrians and cyclists alike and was well captured by the LSTM based networks. 
+
+Another kind of maneuver observed in the dataset is a turn. A turn can be defined as a sharp change in direction of a road user. The self-corrections that were discussed above were acute changes in direction (this can be heuristically defined as $<60^{\circ}$). A turn is an obtuse/significant change in direction ($>60^{\circ}$). These turns are hard for even human observers to detect and now we will be looking at cases where the LSTM based models are able to detect turns that were otherwise undetected by the CV model. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-3-1.png}
+  \caption{Cyclist 2 -Frame 1}
+  \label{fig:cyc2-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-3-2.png}
+  \caption{Cyclist 2 - Frame 2}
+  \label{fig:cyc2-2}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-4-1.png}
+  \caption{Cyclist 3 Frame 1}
+  \label{fig:cyc3-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-4-2.png}
+  \caption{Cyclist 3 Frame 2}
+  \label{fig:cyc3-2}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-2-1.png}
+  \caption{Cyclist 4 -Frame 1}
+  \label{fig:cyc4-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-2-2.png}
+  \caption{Cyclist 4 - Frame 2}
+  \label{fig:cyc4-2}
+\end{subfigure}
+\caption{Turning maneuvers exhibited by road users}
+\label{fig:cyc}
+\end{figure}
+In Fig \ref{fig:cyc2-1} and Fig. \ref{fig:cyc2-2} , the cyclist takes a turn toward the right, which has been correctly predicted by the LSTM based networks. The network would have assessed that the road user needs to correct his/her trajectory.  The movement of the cyclist towards the negative y-axis in the first two seconds may have indicated to the network that the cyclist will turn right. Figures \ref{fig:cyc3-1} \ref{fig:cyc3-2} \ref{fig:cyc4-1} and \ref{fig:cyc4-2} on the other hand are more complicated turns. These turns are perpendicular or even obtuse. There is a hint albeit slight in both these cases that the user might go towards the positive y-axis, which may be helping the network predict these turns. There are again many such cases found in the data where a turn has been correctly predicted by both the LSTM networks. 
+
+Now, we will be looking at cases where the CV model has performed better than the two LSTM based networks. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-5-1.png}
+  \caption{Cyclist 5 -Frame 1}
+  \label{fig:cyc5-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-5-2.png}
+  \caption{Cyclist 5 - Frame 2}
+  \label{fig:cyc5-2}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-6-1.png}
+  \caption{Cyclist 6 Frame 1}
+  \label{fig:cyc6-1}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-6-2.png}
+  \caption{Cyclist 6 Frame 2}
+  \label{fig:cyc6-2}
+\end{subfigure}
+\caption{Trajectories where road users don't course correct}
+\label{fig:cyc5&6}
+\end{figure}
+
+Now in these cases we notice that the road users don't course correct and these cases are unusual in the dataset. In such cases, it is noticed that the LSTM networks always try for course-correction at a suitable place and eventually as the past trajectory length gets longer in the same straight line, they go for a more conservative (and not immediate) course-correction close to the end of the frame. 
+
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.39\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-7-speed.png}
+  \caption{Cyclist 7 -Frame 1}
+  \label{fig:cyc7-speed}
+\end{subfigure}
+\begin{subfigure}{0.39\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-8-speed.png}
+  \caption{Cyclist 8 - Frame 1}
+  \label{fig:cyc8-speed}
+\end{subfigure}
+\caption{Trajectories where velocities are estimated incorrectly by the LSTM based networks}
+\label{fig:cyc7&8}
+\end{figure}
+
+The above figures represent some infrequent situations when the LSTM based network either overestimates or underestimates the velocity of cyclists. Cyclists usually show higher variance in their speed and as a result their velocities are hard to estimate. In the above cases, the cyclist is travelling at a constant velocity and is thus captured well by the CV model. On the other hand the LSTM based networks add some noise as they have seen just two seconds of past trajectory data. However, it has to be pointed out that these are rare occurrences and don't represent the majority of cases where the LSTM based network either capture velocity better or to the same extent as the CV  model.
+
+
+
+\subsubsection{LSTM vs Attention based LSTM model}
+In the previous section, we compared qualitatively the behavior of a CV model vs neural network based models. In this section, we will look at comparing the two LSTM models to assess the behaviors that are captured by one and not another. In addition to the legends from the previous plots, the present plots also consists of white points. These white points represent the position of other road users in the scene \textit{at the time of prediction}. This means that if the network was predicting the ego road user's position at time $t$ using trajectory information till time $t-3$, then the white points represent all other road users present at time $t$. This adds another dimension to the image and conveys how close the ego-user's actual trajectory was to some other road users. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.3\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/ped-turn-1.png}
+  \caption{Pedestrian 1 -Frame 1}
+  \label{fig:ped-turn-1}
+\end{subfigure}
+\begin{subfigure}{0.3\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/ped-turn-2.png}
+  \caption{Pedestrian 2 - Frame 1}
+  \label{fig:ped-turn-2}
+\end{subfigure}
+\begin{subfigure}{0.3\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/ped-turn-3.png}
+  \caption{Pedestrian 3 - Frame 1}
+  \label{fig:ped-turn-3}
+\end{subfigure}
+\caption{Turn Trajectories correctly predicted by Attention based LSTM}
+\label{fig:ped1&2&3}
+\end{figure}
+
+Figures \ref{fig:ped-turn-2} and \ref{fig:ped-turn-3} are turns at the entrance. After the first two seconds, the attention based network is correct in assessing that the pedestrian will turn left for both these cases. Another interesting observation is that this happens with other co-pedestrians as is represented from the white points. The same is the case with \ref{fig:ped-turn-1} where the pedestrian turns right. It is to be pointed out again that many pedestrians move in groups in this data. These pedestrians usually have similar trajectories and maintain a very small distance from each other. These group movement patterns may be better assessed by the Attention based LSTM networks and hence they may be able to better predict turning maneuvers exhibited by groups of pedestrians. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-9-1.png}
+  \caption{Cyclist 9 -Frame 1}
+  \label{fig:cyc9-1}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-9-2.png}
+  \caption{Cyclist 9 - Frame 2}
+  \label{fig:cyc9-2}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-9-l.png}
+  \caption{Cyclist 9 LSTM predictions}
+  \label{fig:cyc9-l}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-9-t.png}
+  \caption{Cyclist 9 TLSTM predictions}
+  \label{fig:cyc9-t}
+\end{subfigure}
+\caption{Trajectories where road users don't course correct}
+\label{fig:cyc9}
+\end{figure}
+
+In Figures \ref{fig:cyc9-1} and \ref{fig:cyc9-2} we clearly see that both the LSTM network and CV model predict the user to go somewhere left where there is another cyclist. On the other hand, the TLSTM network maintains some distance from the other road user on the left. Figures \ref{fig:cyc9-l} and \ref{fig:cyc9-t} refer to predictions made by both the LSTM and TLSTM network respectively. We notice that the LSTM predictions lead to some intersection in trajectories, whereas the TLSTM predictions keep the road users roughly parallel to each other. This maybe because the TLSTM network pays attention to the road user on the left and takes care to keep distance from that road user. In this dataset, head on collisions/intersections are rare as people usually move parallel to each other and in some cases maintain very less distance from each other. 
+%Therefore, we did a simulation to  
+
+
+
+Lastly, it is interesting to look at cases where all 3 of our models fail. Figure \ref{fig:ped-entry} illustrate a pedestrian entering the building and all three models don't suggest that the pedestrian will make a sharp turn. Figure \ref{fig:ped-exit} illustrates a pedestrian leaving the building and all three models predict again that the pedestrian is going to go right and instead the pedestrian goes left. Figures \ref{fig:cyc10} and \ref{fig:cyc11} represent situations when there are abrupt turns and none of the model expect these road user maneuvers. 
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/ped-entry.png}
+  \caption{Pedestrian 1 entering Frame-1}
+  \label{fig:ped-entry}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/ped-exit.png}
+  \caption{Pedestrian 2 exiting Frame-1}
+  \label{fig:ped-exit}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-10.png}
+  \caption{Cyclist 10 - Frame 1}
+  \label{fig:cyc10}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/cyc-11.png}
+  \caption{Cyclist 11 - Frame 1}
+  \label{fig:cyc11}
+\end{subfigure}
+\caption{Undetected/wrongly detected Road user maneuvers }
+\label{fig:fails}
+\end{figure}
+
+
+
+
+
+
 
 
 
