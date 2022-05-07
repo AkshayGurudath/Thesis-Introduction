@@ -622,7 +622,7 @@ In the figure above, the rectangular boxes are fully connected layers with train
 
 It can be shown that in these kinds of gated units, the gradients don't vanish exponentially fast because of the cell state and that's why it becomes pertinent to use LSTMs in long-trajectory time-series methods. 
 
-\subsubsection{Self Attention and Transformer Encoders}
+\subsubsection{Self Attention and Transformer Encoders}\label{ssec:transformers_theory}
 Self attention was a concept first discussed in \cite{vaswani_attention_2017}, which aimed at computing similarity scores between words in a sentence. For example in the sentence "John went to the store because he wanted milk", the word "he" needs to be associated with "John". Self attention is the mechanism through which the model understands these kind of inter-sentence dependencies. In our case, we have multiple road users traversing and each of their behaviors is influenced by some other road user's behavior. Therefore it becomes important to try and bake these inter road user dependencies in the model.  We propose to use the self attention mechanism in our problem through a transformer encoder architecture. The transformer encoder architecture was introduced in the same paper, where the transformer was used to process an entire sentence as a whole in a non-recurrent fashion. The recurrent nature of LSTMs or RNNs made their performance dependent on whether the hidden state was preserving information from previous time steps. By processing entire sequences as one, the Transformer architecture had no risk of losing past information. Transformers have revolutionized the field of natural language processing and computer vision, because of their capability to adapt to different tasks. Through this section, this architecture and its constituent building block of self attention will be discussed in detail. 
 
 
@@ -676,7 +676,7 @@ Each feature vector in the $Z_{net}$ matrix is then passed through two feed-forw
 \section{Data}
 Through this section, we present details regarding the features, quantity and quality of data. Further, through data exploration and visualization, key facets and characteristics of the data is presented. Lastly, important pre-processing steps that suitably mould the data for later algorithms are enumerated. 
 
-The data has been supplied by Viscando, whose technology tracks all road users to understand movement patterns, traffic flow and human behaviour. Two infrastructure stereo vision sensors were placed on the buildings of the Link\"{o}ping University campus. The data collected over a week contains trajectories of pedestrians, cyclists and the autonomous shuttles. 
+The data has been supplied by Viscando, whose technology tracks all road users to understand movement patterns, traffic flow and human behaviour. Installed on static road infrastructure like light posts or building walls, Viscando’s sensor OTUS3D detects, classifies, and tracks all road users using 3D vision and AI. Images simultaneously captured by two spatially separated cameras are converted into a dense 3D point cloud. Point clustering is then applied to the point cloud to detect single road users and to estimate their sizes and 3D shapes. Then, the objects are classified using shape- and appearance-based AI methods. Finally, object tracking using Kalman filter is applied to compute trajectories of different objects, with time-resolved position, speed, acceleration and heading.In case the measurement system consists of several sensors, the detections from individual sensors are merged before tracking. Two such vision sensors were placed on the buildings of the Link\"{o}ping University campus. The data collected over a week contains trajectories of pedestrians, cyclists and the autonomous shuttles. 
 
 
 
@@ -701,19 +701,19 @@ The data has been supplied by Viscando, whose technology tracks all road users t
 \centering
 \begin{subfigure}{.3\textwidth}
   \centering
-  \includegraphics[width=.5\linewidth]{data/Data_2.png}
+  \includegraphics[width=\linewidth]{data/Data_2.png}
   \caption{Cyclists}
   \label{fig:cyc_tra}
 \end{subfigure}%
 \begin{subfigure}{.3\textwidth}
   \centering
-  \includegraphics[width=.5\linewidth]{data/Data_3.png}
+  \includegraphics[width=\linewidth]{data/Data_3.png}
   \caption{Shuttles}
   \label{fig:shu_tra}
 \end{subfigure}
 \begin{subfigure}{.3\textwidth}
   \centering
-  \includegraphics[width=.5\linewidth]{data/Data_4.png}
+  \includegraphics[width=\linewidth]{data/Data_4.png}
   \caption{Pedestrians}
   \label{fig:ped_shu}
 \end{subfigure}
@@ -784,8 +784,7 @@ Between 0.05 and 0.2 & 3540\\
 0.24 & 822904 \\  
 Between 0.3 and 1.5 & 8524 \\  
 Greater than 1.5 & 4472 \\
-
-%\bottomrule
+\bottomrule
 \end{tabular}
 \caption{Distribution of sampling times}
 \label{table:sampling_time}
@@ -800,7 +799,7 @@ Times & User 1 & User 2 & User 3 \\ \midrule
 09:10:40:20 & $[x_1',y_1']$ & $[x_2',y_2']$ & $[x_3',y_3']$\\
 09:10:40:40 & $[x_1'',y_1'']$ & $[x_2'',y_2'']$ & $[x_3'',y_3'']$\\
 09:10:41:00 & $[x_1''',y_1''']$ & $[x_2''',y_2''']$ & $[x_3''',y_3''']$\\
-%\bottomrule
+\bottomrule
 \end{tabular}
 \caption{Aligned road users' data}
 \label{table:common_axis_data}
@@ -831,16 +830,15 @@ where $input^{k}_t$ and $target^{k}_t$ is obtained from the equation \ref{eq:lst
 \subsubsection{Data Exclusions}\label{ssec:exclusions}
 There are some exclusions applied to the data and the reason for applying these exclusions are elaborated in this section. 
 
-When analyzing the distributions of speed, there were some observations which had a very high speed ($>$50 kmph). On further analysis, it was seen that this happened mostly at the start frame when the road user was captured.  It is important to know that in the data given to us, the first three frames of the tracked road user is discarded as they will contain noisy tracked estimates of positions and speeds. Speeds are derived from previous positions and sometimes it may be the case that speed estimate in the fourth frame is also noisy, because uncertainty in measuring speed is higher than uncertainty in measuring position. Therefore,  for safe measure these road users are discarded in our analysis.
+When analyzing the distributions of speed, there were some observations which had a very high speed ($>$50 kmph). On further analysis, it was seen that this happened mostly at the start frame when the road user was captured.  It is important to know that in the data given to us, the first three frames of the tracked road user is discarded as they will contain noisy tracked estimates of positions and speeds. Speeds are derived from previous positions and sometimes it may be the case that speed estimate in the fourth frame is also noisy, because uncertainty in measuring speed is higher than uncertainty in measuring position. Therefore,  for safe measure these road users ($<0.5\%$) are discarded in our analysis.
 
 It is also mandated that the trajectory of a road user consists of at least two seconds (which is two timesteps steps in a 1 second sampled data and 10 timesteps in a 0.2 second sampled data) for future predictions. This is done so that there is enough input to the network, before a network starts predicting. This serves the purpose of eliminating noise from too few observations to make a prediction. This exclusion is applied to all these datasets. 
 
-There are some interesting cases when making the \textit{Frames} data structure. There may be three road users at the time of observation, but $s$ time steps later, one of them (or all) may have left the frame. In this case for the missing road user who left the frame, the target features are populated as NaNs (not a number/missing value). As mentioned later in Section \ref{ssec:tlstm}, the network does not calculate loss over these cases. There may be also be cases where a new road user entering the scene has just one second of data, whereas all other road users have history that extends multiple seconds into the past. Thus, one row of the \textit{Frames} data structure has some road users with a good past and some road users without the minimum two seconds.  One option here would be to remove this new road user from the observation (input) and prediction (target). However, that road user, even with one observation, may be influencing the scene. Therefore his/her data removal may violate the natural social structure present in the scene. In order to avoid this problem , that entire timestamp's scene is removed from the data $[input_t,target_t]$. In the next timestamp, this new road user will have two prior timesteps of features and if no other road users freshly enter the scene, this scene is included for training. 
+There are some interesting cases when making the \textit{Frames} data structure. There may be three road users at the time of observation, but $s$ time steps later, one of them (or all) may have left the frame. In this case for the missing road user who left the frame, the target features are populated as NaNs (not a number/missing value). As mentioned later in Section \ref{ssec:tlstm}, the network does not calculate loss over these cases. There may be also be cases where a new road user entering the scene has just one second of data, whereas all other road users have history that extends multiple seconds into the past. Thus, one row of the \textit{Frames} data structure has some road users with a good past and some road users without the minimum two seconds.  One option here would be to remove this new road user from the observation (input) and prediction (target). However, that road user, even with one observation, may be influencing the scene. Therefore his/her data removal may violate the natural social structure present in the scene. In order to avoid this problem , that entire timestamp's scene is removed from the data $[input_t,target_t]$. In the next timestamp, this new road user will have two prior timesteps of features and if no other road users freshly enter the scene, this scene is included for training. This step doesn't exclude entire road users' trajectories, but predictions are not performed on some time steps in these road users' trajectories. 
 
-Another interesting case that is observed in the \textit{Frames} data structure is that two pedestrians/ two cyclists are very close to each other throughout their trajectory. Sometimes the distance between the two road users is 0 throughout the trajectory. This means that one of the road users was detected as two road users. These kinds of observations were removed from the dataset. Also, two road users can be quite close to each other when they are walking. For example, if acquaintances are walking together, they do not maintain a lot of distance between them. A heuristic cutoff of 20 cm is used as the minimum distance between any pair of road users throughout their trajectory. This means that if two road users maintain a distance of less than 20 cm throughout their trajectory, only one road user is considered as we assume that two road users were detected as one. 
+Another interesting case that is observed in the \textit{Frames} data structure is that two pedestrians/ two cyclists are very close to each other throughout their trajectory. Sometimes the distance between the two road users is 0 throughout the trajectory. This means that one of the road users was detected as two road users. These kinds of observations were removed from the dataset. Also, two road users can be quite close to each other when they are walking. For example, if acquaintances are walking together, they do not maintain a lot of distance between them. A heuristic cutoff of 20 cm is used as the minimum distance between any pair of road users throughout their trajectory. This means that if two road users maintain a distance of less than 20 cm throughout their trajectory, only one road user is considered as we assume that two road users were detected as one. Through this cutoff, $<1\%$ of road users were removed. 
 
-
- The \textit{Individual Trajectories} data structure can be used for the Kalman Filter training and for the Vanilla LSTM network. The \textit{Frame} data structure can be used for the attention based LSTM network's training as this network tries to model the social behavior. To make matters more convenient, the trajectories present in the \textit{Frames} data structure is used to train the Kalman Filter network, LSTM network and the Attention based LSTM network. This is because it would be interesting to see how these methods compare when trained on the same data.
+After all the cleaning, roughly 25\% of road users were removed, of which most of them had a very short trajectory length ($<$ 2 seconds).  The \textit{Individual Trajectories} data structure can be used for the Kalman Filter training and for the Vanilla LSTM network. The \textit{Frame} data structure can be used for the attention based LSTM network's training as this network tries to model the social behavior. To make matters more convenient, the trajectories present in the \textit{Frames} data structure is used to train the Kalman Filter network, LSTM network and the Attention based LSTM network. This is because it would be interesting to see how these methods compare when trained on the same data.
 
 \section{Methodology}
 In this section, the rationale behind choosing the methods mentioned in the theory is elaborated. Further implementing this theoretical method on the specific data is presented in more detail. 
@@ -857,7 +855,7 @@ The data as we have studied in the previous section consists of pedestrians, cyc
 \end{equation}
 where $\eta_t$ and $\epsilon_t$ are distributed as $N(0,Q)$ and $N(0,R)$ respectively. 
 
-From the above equation, we see that the latent variable has temporal dependencies and the observed variable is a function of the latent variable. If the model parameters and the hidden states in equation\ref{eq:m1} are known, one can calculate the future hidden states and future observed states. The advantage of a Kalman filter is that one can make n-step predictions not only about the means of the observed states, but also the uncertainty around the observed states. This makes the Kalman Filter useful in calculating predictions ahead of time. In the case of our problem, the latent variable is assumed to be the actual positions and speeds of a road user. The observed variable is the measured position that is obtained from the data. This setting along with specific parameters for $A$ and $C$ is used in the Constant Velocity model. 
+From the above equation, we see that the latent variable has temporal dependencies and the observed variable is a function of the latent variable. If the model parameters and the hidden states in Eq. \ref{eq:m1} are known, one can calculate the future hidden states and future observed states. The advantage of a Kalman filter is that one can make n-step predictions not only about the means of the observed states, but also the uncertainty around the observed states. This makes the Kalman Filter useful in calculating predictions ahead of time. In the case of our problem, the latent variable is assumed to be the actual positions and speeds of a road user. The observed variable is the measured position that is obtained from the data. This setting along with specific parameters for $A$ and $C$ is used in the Constant Velocity model. 
 
 $$X_t=\begin{pmatrix}x_t 
 \\ \dot{x_t} 
@@ -908,12 +906,13 @@ The values of $Q$, $R$ are usually empirically chosen in CV models. However, in 
 \end{algorithmic}
 \end{algorithm}
 
-The algorithm above calculates $Q$, $R$ for pedestrians, cyclists and shuttles. This algorithm can be extended to calculate $A$, $C$ as well or calculate all of these parameters for some other linear Gaussian state space model such as the Constant Acceleration model.  Once parameters are obtained, the task of prediction is pretty straightforward. For the first $b$ timesteps, no prediction is done and filtered estimates of the hidden state is obtained. This is called as the burn-in period to give a good starting point for the hidden states.  After $b$ timesteps are complete, the Kalman filter is propagated forward (using again the filtering algorithm \ref{ssec:filtering}) $s$ steps ahead to obtain the latent and measured state. The mean, covariance of the latent and measured state can be estimated through simple forward filtering. 
+The algorithm above calculates $Q$, $R$ for pedestrians, cyclists and shuttles. This algorithm can be extended to calculate $A$, $C$ as well or calculate all of these parameters for some other linear Gaussian state space model such as the Constant Acceleration model.  Once parameters are obtained, the task of prediction is pretty straightforward. For the first $b$ timesteps, no prediction is done and filtered estimates of the hidden state is obtained. This is called as the burn-in period to give a good starting point for the hidden states.  After $b$ timesteps are complete, the Kalman filter is propagated forward (using again the filtering algorithm \ref{ssec:filtering}) $s$ steps ahead to obtain the latent and measured state. The mean, covariance of the latent and measured state can be estimated through simple forward filtering as illustrated in Figure \ref{fig:forward_filter}. 
 
 \begin{figure}[H]
 \centering
 \includegraphics[scale=0.5]{method/cov_prediction.PNG}
 \caption{Illustration of predicted means and covariances}
+\label{fig:forward_filter}
 \end{figure}
 
 \subsection{Vanilla Long Short Term Memory networks}\label{ssec:vanilla_lstm}
@@ -926,7 +925,7 @@ There are two major limitations to using the CV model for predictions:
 
 One way of solving these limitations is to resort to non-linear state space models. However, it has been seen (\cite{hutchison_pedestrian_2013}) that they don't offer considerable lift from a CV model. This is probably because even these models assume some kind of road user behavior which is not always displayed by a road user in isolation. A road user can alternate between behaviors such as constant velocity or constant acceleration or constant turn depending on the situation. Also, as the non-linear model complexity increases, it becomes increasingly difficult to use parameter estimation algorithms such as the EM algorithm as calculating closed form update equations for the parameters become increasingly complex.
 
-Therefore, it may be necessary to move away from probabilistic models and rather look at an unlikely philosophical off-shoot of the Kalman Filter. The below equation governs the mechanics of the Elman network. This network also has a hidden state propagating forward in time and an observed state which is a function of the hidden state.
+Therefore, it may be necessary to move away from filter-based models and rather look at an unlikely philosophical off-shoot of the Kalman Filter. The below equation governs the mechanics of the Elman network. This network also has a hidden state propagating forward in time and an observed state which is a function of the hidden state.
 
 \begin{equation}
 \begin{split}
@@ -937,7 +936,7 @@ Therefore, it may be necessary to move away from probabilistic models and rather
 
 where $W_h$, $U_h$, $W_y$, $b_h$,$b_y$ represent parameter weight,bias vectors and $\sigma_h$,$\sigma_y$ represent activation functions. This is a widely used RNN-variant and improves on the Kalman Filter as all the relationships between the hidden states and the observed state is non-linear. With the help of backpropagation, all the parameter weights and biases can be obtained through training on the data. If the parameters are known, the network can be propagated forward in time to obtain estimates of $h_t$ and $y_t$. Thus these networks are more complex and at the same time easier to train, which make it a top choice for understanding patterns in temporal data. However, when the trajectory lengths are long these networks suffer from the vanishing gradient or the exploding gradient problem.  To overcome these shortcomings of an RNN, Long Short Term Memory (LSTM) was introduced. Moreover LSTM networks have also been widely used with high degrees of success in intent prediction tasks (insert references). The idea behind using an LSTM network for our problem is to better capture the dynamics of a road user's trajectory, compared to the CV model. 
 
-The implementation of this network is done on PyTorch. The data is fed into the network in the format mentioned in \ref{eq:lstm_data}.Every neural network takes as input batches of data of size $b$. The forward step is done on the entire batch of data and this basically means that multiple tuples $input_1,input_2,...,input_b$ are clustered together and fed forward into the neural network. Each of these inputs consist of feature representations of the entire trajectory. At a particular time step $t$ a feature representation consists of the x,y coordinate as well as dummy variables indicating the type of road user. Therefore each of these inputs are of size $t \times 4$ where t signifies trajectory length. Inside a batch of data, the first input may have a trajectory length of 200, whereas the second input may have a trajectory length  of just 10. In order to train a neural network, this trajectory length must be constant throughout the batch. This is because internal computations (such as calculation of intermediate outputs in a network) are done on the entire batch together. Therefore every trajectory in the batch is appended with multiples of $[0,0,0,0]$ until they reach a length of the longest trajectory in the batch. This concept is known as padding and is quite prevalent in dealing with varying length sequences. $b\times t_{max} \times 4$ is the dimension of the input data.   However, more computations are performed over these padded indices and this costs quite a lot of computation time. In order to save compute time and not make the network calculate over these padded indices, there is a very clever idea called as packing implemented in PyTorch. Let us say that there were varying length trajectories in one batch. If the lengths of these trajectories were passed as input, internally the trajectories would be sorted and stacked like the image below. 
+The implementation of this network is done on PyTorch. The data is fed into the network in the format mentioned in Eq. \ref{eq:lstm_data}.Every neural network takes as input batches of data of size $b$. The forward step is done on the entire batch of data and this basically means that multiple tuples $input_1,input_2,...,input_b$ are clustered together and fed forward into the neural network. Each of these inputs consist of feature representations of the entire trajectory. At a particular time step $t$ a feature representation consists of the x,y coordinate as well as dummy variables indicating the type of road user. Therefore each of these inputs are of size $t \times 4$ where t signifies trajectory length. Inside a batch of data, the first input may have a trajectory length of 200, whereas the second input may have a trajectory length  of just 10. In order to train a neural network, this trajectory length must be constant throughout the batch. This is because internal computations (such as calculation of intermediate outputs in a network) are done on the entire batch together. Therefore every trajectory in the batch is appended with multiples of $[0,0,0,0]$ until they reach a length of the longest trajectory in the batch. This concept is known as padding and is quite prevalent in dealing with varying length sequences. $b\times t_{max} \times 4$ is the dimension of the input data.   However, more computations are performed over these padded indices and this costs quite a lot of computation time. In order to save compute time and not make the network calculate over these padded indices, there is a very clever idea called as packing implemented in PyTorch. Let us say that there were varying length trajectories in one batch. If the lengths of these trajectories were passed as input, internally the trajectories would be sorted and stacked like the image below. 
 
 \begin{figure}[H]
 \centering
@@ -947,7 +946,9 @@ The implementation of this network is done on PyTorch. The data is fed into the 
 
 
 
-At time step 1 and 2, the effective batch size that is considered by the network for computation is 6. This means that all the 6 observations are used for calculation of internal states. At the third time step, the effective batch size is now 5, indicating to the network that the compute now needs to be performed only for the first five observations in the entire batch. Thus, by using this concept of an effective batch size at each time step, the network knows how to ignore padded values. For a trajectory length of $t$, the network produces the hidden states at each time step $h_1,h_2...h_t$ of size $h$ for an LSTM cell. The final hidden state $h_t$ can be considered as a good representation of the trajectory as it contains information from previous time steps. Multiple such LSTM cells can be stacked one after the other so that the output of one LSTM cell is the input to another. If there are $n$ layers, then $n$ final hidden states are obtained in total ($h_t^1,h_t^2,...,h_t^n$). All of these final hidden states are concatenated to obtain a total dimension of $nh$. This concatenated hidden state is then finally passed through a feedforward layer which brings down the dimensions required such that for each trajectory, the output from the LSTM and feedforward layer is $k$-dimensional.
+At time step 1 and 2, the effective batch size that is considered by the network for computation is 6. This means that all the 6 observations are used for calculation of internal states. At the third time step, the effective batch size is now 5, indicating to the network that the compute now needs to be performed only for the first five observations in the entire batch. Thus, by using this concept of an effective batch size at each time step, the network knows how to ignore padded values.
+
+For a trajectory length of $t$, the network produces the hidden states at each time step $h_1,h_2...h_t$ of size $h$ for an LSTM cell. The final hidden state $h_t$ can be considered as a good representation of the trajectory as it contains information from previous time steps. Multiple such LSTM cells can be stacked one after the other so that the output of one LSTM cell is the input to another. If there are $n$ layers, then $n$ final hidden states are obtained in total ($h_t^1,h_t^2,...,h_t^n$). All of these final hidden states are concatenated to obtain a total dimension of $nh$. This concatenated hidden state is then finally passed through a feedforward layer which brings down the dimensions required such that for each trajectory, the output from the LSTM and feedforward layer is $k$-dimensional.
 
 \begin{figure}[H]
 \centering
@@ -1002,14 +1003,14 @@ Instead of the network predicting $\sigma_{t,x}, \sigma_{t,y}, \rho_t$, the netw
 
 
 \subsection{Attention based LSTM network}\label{ssec:tlstm}
-There is one limitation to the approach used in the above section. The Vanilla LSTM model tries to model the dynamics of individual trajectories in the best way possible. However, sometimes road user dynamics are also governed by some other road user in the vicinity. For example, if there was a cyclist coming in front of a pedestrian, either of them will move away from the point of collission. Also, there are cases when two pedestrians moving in the same direction move similarly as one follows the path that the other has taken subconsciously. Road users tend to make these complex maneuvers that takes into consideration other road users without seemingly thinking a lot about it. Therefore, when it comes to predictions, it becomes important to incorporate the social aspect of behaviors in a road user's trajectory. The Social-LSTM is a recent state-of-the-art model that has shown to capture these social interactions to a reasonable extent. The principle of a social LSTM is to combine the workings of a Vanilla LSTM with a so-called social pooling layer. At a particular frame, all road users' features are passed into a plain LSTM network. This LSTM network then produces hidden states for each of these road users. These hidden states represent what a road user would do without the presence of other social factors.  If a pedestrian's trajectory needs to be predicted, then their neighbors' (who are within a certain spatial distance) hidden states are stacked in a specific way to construct a pooled tensor (will be added in the relevant literature section). In our method instead of using this pooling, an attention mechanism is used to capture how much attention each road user gives each other. Therefore the output representation coming from the LSTM network for each road user is then passed through an attention layer. The hypothesis for building this kind of a network is that:
+There is one limitation to the approach used in the above section. The Vanilla LSTM model tries to model the dynamics of individual trajectories in the best way possible. However, sometimes road user dynamics are also governed by some other road user in the vicinity. For example, if there was a cyclist coming in front of a pedestrian, either of them will move away from the point of collission. Also, there are cases when two pedestrians moving in the same direction move similarly as one follows the path that the other has taken subconsciously. Road users tend to make these complex maneuvers that takes into consideration other road users without seemingly thinking a lot about it. Therefore, when it comes to predictions, it becomes important to incorporate the social aspect of behaviors in a road user's trajectory. The Social-LSTM \cite{alahi_social_2016} is a recent state-of-the-art model that has shown to capture these social interactions to a reasonable extent. The principle of a social LSTM is to combine the workings of a Vanilla LSTM with a so-called social pooling layer. At a particular frame, all road users' features are passed into a plain LSTM network. This LSTM network then produces hidden states for each of these road users. These hidden states represent what a road user would do without the presence of other social factors.  If a pedestrian's trajectory needs to be predicted, then their neighbors' (who are within a certain spatial distance) hidden states are stacked in a specific way to construct a pooled tensor (will be added in the relevant literature section). In our method instead of using this pooling, an attention mechanism is used to capture how much attention each road user gives each other. Therefore the output representation coming from the LSTM network for each road user is then passed through an attention layer. The hypothesis for building this kind of a network is that:
 \begin{itemize}
     \item The LSTM networks should output a representation of a road user's behavior without any social influence
     \item If a road user's trajectory was changed due to some other road user(s) in the network, this behavior should be captured by the attention layer 
 \end{itemize}
 
-Practically, this is implemented as a transformer encoder architecture which basically consists of multi-head attention layer and a feedforward layer as mentioned in Section .
-The format of data that is passed into the network is mentioned in \ref{eq:transformers_data}. Essentially, the number of road users in a frame is another dimension that is added to the previous data used for the Vanilla LSTM network. The input to the vanilla LSTM network was of dimensions $b \times l_{max} \times 4$. The output coming from the LSTM network for each road user is of dimension $b \times nh$ where $h$ is the dimension of the hidden state. In total there will be $r$ hidden states for all road users present in the frame. In a batch of frames, there may be instance with different number of road users in each frame. A network cannot take variable sized input and therefore one option is to pad the hidden states outputted from the LSTM network and then pass it into the transformer. However, the idea of packing cannot be used in a transformer as a transformer computes on all instances of time at once. There is no recurrent nature in a transformer and because of this, the concept of effective batch size cannot be used. One solution is to use the concept of attention masking where attention scores are not calculated for padded positions in the input. The concept used in this paper is to batch together all frames/instances where the number of road users are same. For example there may be multiple instances/occurrences when there are 4 road users in a frame. All these instances are batched together and sent into the Attention based LSTM network. The number of road users in a frame can range between 0 to 20. Again, a feedforward network is used to bring down the dimension of the output coming from a transformer. The final predictions are made for all the road users in the frame and thus the loss for every training instance can be the MSE loss or the log-likelihood loss presented in the previous section. In the case that the road user has exited the frame at prediction time, the actual positions of the road user is unknown. In these  circumstances, loss is not calculated for these road users. 
+Practically, this is implemented as a transformer encoder architecture which basically consists of multi-head attention layer and a feedforward layer as mentioned in Section \ref{ssec:transformers_theory} .
+The format of data that is passed into the network is mentioned in Eq. \ref{eq:transformers_data}. Essentially, the number of road users in a frame is another dimension that is added to the previous data used for the Vanilla LSTM network. The input to the vanilla LSTM network was of dimensions $b \times l_{max} \times 4$. The output coming from the LSTM network for each road user is of dimension $b \times nh$ where $h$ is the dimension of the hidden state. In total there will be $r$ hidden states for all road users present in the frame. In a batch of frames, there may be instance with different number of road users in each frame. A network cannot take variable sized input and therefore one option is to pad the hidden states outputted from the LSTM network and then pass it into the transformer. However, the idea of packing cannot be used in a transformer as a transformer computes on all instances of time at once. There is no recurrent nature in a transformer and because of this, the concept of effective batch size cannot be used. One solution is to use the concept of attention masking where attention scores are not calculated for padded positions in the input. The concept used in this thesis is to batch together all frames/instances where the number of road users are same. For example there may be multiple instances/occurrences when there are 4 road users in a frame. All these instances are batched together and sent into the Attention based LSTM network. The number of road users in a frame can range between 0 to 20. Again, a feedforward network is used to bring down the dimension of the output coming from a transformer. The final predictions are made for all the road users in the frame and thus the loss for every training instance can be the MSE loss or the log-likelihood loss presented in the previous section. In the case that the road user has exited the frame at prediction time, the actual positions of the road user is unknown. In these  circumstances, loss is not calculated for these road users. 
 
 \begin{figure}[H]
 \centering
@@ -1030,11 +1031,11 @@ For this model, the train/test/validation split was done on dataset 1 and datase
 \centering
 \begin{tabular}{@{}cccc@{}}
 \toprule
-Road User & Dataset 1 & Dataset 2 \\ \midrule
-Pedestrian  & NA & 1.2 \\ 
-Cyclist  & NA & 3.7 \\
-Shuttle  & NA & 2.4 \\  \midrule
-Total & NA & 2.2 \\    \midrule
+Road User & 0.2s Dataset & 1s Dataset \\ \midrule
+Pedestrian  & 1.4 & 1.2 \\ 
+Cyclist  & 2.8 & 3.7 \\
+Shuttle  & 2.4 & 2.4 \\  \midrule
+Total & 1.9 & 2.2 \\    \midrule
 %\bottomrule
 \end{tabular}
 \caption{Mean Squared Error on test}
@@ -1045,11 +1046,11 @@ Total & NA & 2.2 \\    \midrule
 \centering
 \begin{tabular}{@{}cccc@{}}
 \toprule
-Road User & Dataset 1 & Dataset 2 \\ \midrule
-Pedestrian  & NA & 1.2 \\ 
-Cyclist  & NA & 3.6 \\
-Shuttle  & NA & 1.2 \\  \midrule
-Total & NA & 2.2 \\    \midrule
+Road User & 0.2s Dataset & 1s Dataset \\ \midrule
+Pedestrian  & 1.2 & 1.2 \\ 
+Cyclist  & 2.7 & 3.6 \\
+Shuttle  & 1.7 & 1.2 \\  \midrule
+Total & 1.8 & 2.2 \\    \midrule
 %\bottomrule
 \end{tabular}
 \caption{Mean Squared Error on validation}
@@ -1068,11 +1069,11 @@ Apart from MSE, the likelihood of observing the actual position given the predic
 \centering
 \begin{tabular}{@{}cccc@{}}
 \toprule
-Road User & Dataset 1 & Dataset 2 \\ \midrule
-Pedestrian  & NA & -2.3 \\ 
-Cyclist  & NA & -3.4 \\
-Shuttle  & NA & -2.7 \\  \midrule
-Total & NA & -2.7 \\    \midrule
+Road User & 0.2s Dataset & 1s Dataset 2 \\ \midrule
+Pedestrian  -3.3  & -2.3 \\ 
+Cyclist  & -3.8 & -3.4 \\
+Shuttle  & -3.4 & -2.7 \\  \midrule
+Total & -3.5 & -2.7 \\    \midrule
 %\bottomrule
 \end{tabular}
 \caption{Avg log-likelihood on test}
@@ -1083,11 +1084,11 @@ Total & NA & -2.7 \\    \midrule
 \centering
 \begin{tabular}{@{}cccc@{}}
 \toprule
-Road User & Dataset 1 & Dataset 2 \\ \midrule
-Pedestrian  & NA & -2.3 \\ 
-Cyclist  & NA & -3.4 \\
-Shuttle  & NA & -2.4 \\  \midrule
-Total & NA & -2.7 \\    \midrule
+Road User & 0.2s Dataset & 1s Dataset  \\ \midrule
+Pedestrian  & -3.3 & -2.3 \\ 
+Cyclist  & -3.8 & -3.4 \\
+Shuttle  & -3.4 & -2.4 \\  \midrule
+Total & -3.5 & -2.7 \\    \midrule
 %\bottomrule
 \end{tabular}
 \caption{Avg log-likelihood on validation}
@@ -1095,6 +1096,7 @@ Total & NA & -2.7 \\    \midrule
 }
 \end{table}
 
+As can be seen from Tables \ref{table:1} \ref{table:2}, the MSE is almost similar for all road users except for cyclists where MSE is lower for the 0.2s dataset. This is because cyclists tend to move faster and a higher sampling time will give relatively more information. Also Tables \ref{table:3} \ref{table:4} present the average log-likelihood score. This score cannot be compared across the two differently sampled datasets, as the distributions are different. Both distributions have different covariance matrices and hence differently shaped distributions. The probability of observing the same point with respect to both these distributions will be different. 
 \subsection{Hyperparameter-tuning}
 \subsubsection{Vanilla LSTM}
 For the vanilla-LSTM, the number of layers and the size of hidden layers are two important hyperparameters. To tune them, a coarse grid hyperparameter tuning was performed where the different networks were trained on different parameters. The networks' test and validation MSE is shown below:
@@ -1387,8 +1389,74 @@ Figures \ref{fig:ped-turn-2} and \ref{fig:ped-turn-3} are turns at the entrance.
 \label{fig:cyc9}
 \end{figure}
 
-In Figures \ref{fig:cyc9-1} and \ref{fig:cyc9-2} we clearly see that both the LSTM network and CV model predict the user to go somewhere left where there is another cyclist. On the other hand, the TLSTM network maintains some distance from the other road user on the left. Figures \ref{fig:cyc9-l} and \ref{fig:cyc9-t} refer to predictions made by both the LSTM and TLSTM network respectively. We notice that the LSTM predictions lead to some intersection in trajectories, whereas the TLSTM predictions keep the road users roughly parallel to each other. This maybe because the TLSTM network pays attention to the road user on the left and takes care to keep distance from that road user. In this dataset, head on collisions/intersections are rare as people usually move parallel to each other and in some cases maintain very less distance from each other. 
-%Therefore, we did a simulation to  
+In Figures \ref{fig:cyc9-1} and \ref{fig:cyc9-2} we clearly see that both the LSTM network and CV model predict the user to go somewhere left where there is another cyclist. On the other hand, the TLSTM network maintains some distance from the other road user on the left. Figures \ref{fig:cyc9-l} and \ref{fig:cyc9-t} refer to predictions made by both the LSTM and TLSTM network respectively. We notice that the LSTM predictions lead to some intersection in trajectories, whereas the TLSTM predictions keep the road users roughly parallel to each other. This maybe because the TLSTM network pays attention to the road user on the left and takes care to keep distance from that road user. In this dataset, head on collisions/intersections are rare as people usually move parallel to each other and in some cases maintain very less distance from each other. Therefore, we did a simulation of two pedestrians such that they are on a collision course. We compared the predictions of the LSTM and the TLSTM network to see where they are different. 
+
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/sim-acu-l.png}
+  \caption{LSTM prediction for acute collision}
+  \label{fig:sim-acu-l}
+\end{subfigure}
+\begin{subfigure}{0.4\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/sim-acu-t.png}
+  \caption{TLSTM Prediction for acute collision}
+  \label{fig:sim-acu-t}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/sim-perp-l.png}
+  \caption{LSTM Prediction for perpendicular collision}
+  \label{fig:sim-perp-l}
+\end{subfigure}
+\begin{subfigure}{0.40\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{quali_results/sim-perp-t.png}
+  \caption{TLSTM Prediction for perpendicular collision}
+  \label{fig:sim-perp-t}
+\end{subfigure}
+\caption{Simulation of Trajectory Collision}
+\label{fig:sims}
+\end{figure}
+
+It is noticed from Figures \ref{fig:sim-acu-l} and \ref{fig:sim-acu-t} that for an acute collision, both of them seem to course correct trajectories of $A$ and $B$. The distance between the final predictions for $A$ and $B$ is slightly greater for the TLSTM network compared to a LSTM network. However, the more interesting observation is seen in \ref{fig:sim-perp-l} and \ref{fig:sim-perp-t} where the TLSTM network avoids collision between the two road users whereas the plain vanilla LSTM predicts both road users to be approximately in the same spot. Also, given below is the attention matrix extracted from the network when it was making the prediction. It can be seen that in both these cases, road users are giving each other some attention. In the acute collision case, one of the road users gives the other road user lesser attention, even though it is expected to be symmetric for both these road users.  In the perpendicular collision case, road user A gives lesser attention to B than B gives to A. This can be reasoned on the basis that it is usually the responsibility of a person who is crossing (or moving on the lesser travelled direction) to pay attention to other road users on the main way.
+
+\begin{table}[H]
+\parbox{.45\linewidth}{
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Road User & A  & B  \\ \midrule
+A  & 0.92 & 0.08 \\ 
+B  & 0.63 & 0.37 \\ \midrule
+%\bottomrule
+\end{tabular}
+\caption{Attention for the acute collision}
+\label{table:attn-acute}
+}
+\hfill
+\parbox{.5\linewidth}{
+\centering
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Road User & A  & B  \\ \midrule
+A  & 0.78 & 0.21 \\ 
+B  & 0.58 & 0.41 \\ \midrule
+%\bottomrule
+\end{tabular}
+\caption{Attention for perpendicular collision}
+\label{table:attn-perp}
+}
+\end{table}
+
+
+
+
+
+
 
 
 
